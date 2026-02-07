@@ -2,7 +2,6 @@ package handler
 
 import (
 	"embed"
-	"io/fs"
 	"net/http"
 )
 
