@@ -1,0 +1,12 @@
+.git/
+.github/
+.specify/
+.claude/
+specs/
+docs/
+.env
+.env.*
+.gitignore
+.dockerignore
+*.md
+LICENSE

@@ -1,0 +1,20 @@
+# Environment files (sensitive credentials)
+.env
+.env.local
+.env.production
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Go binaries and test artifacts
+/smartlattes
+*.exe
+*.test
+*.out
+
+# OS files
+.DS_Store
+Thumbs.db

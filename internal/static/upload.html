@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enviar CV - smartLattes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">smart<span>Lattes</span></a>
+        <ul class="navbar-nav">
+            <li><a href="/upload" class="active">Enviar CV</a></li>
+            <li><a href="/explorer">Explorar Dados</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="card">
+            <h2>Enviar Curriculum Vitae</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
+                Selecione o arquivo XML exportado da Plataforma Lattes para importar seus dados.
+            </p>
+
+            <form id="upload-form" enctype="multipart/form-data">
+                <div id="drop-zone" class="drop-zone">
+                    <span class="drop-zone-icon" aria-hidden="true">&#128196;</span>
+                    <p class="drop-zone-text">Arraste o arquivo XML aqui ou clique para selecionar</p>
+                    <p class="drop-zone-hint">Apenas arquivos .xml (m&aacute;ximo 10MB)</p>
+                    <input type="file" id="file-input" name="file" accept=".xml" hidden>
+                    <p id="file-name" class="file-name"></p>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn btn-primary" disabled>
+                    Enviar Arquivo
+                </button>
+            </form>
+
+            <div class="spinner" id="spinner"></div>
+
+            <div id="error-message" class="message message-error"></div>
+
+            <div id="success-message" class="message message-success"></div>
+
+            <div id="result-card" class="card result-card">
+                <h3>CV importado com sucesso</h3>
+                <div class="result-grid">
+                    <span class="result-label">Nome:</span>
+                    <span class="result-value" id="result-name"></span>
+
+                    <span class="result-label">ID Lattes:</span>
+                    <span class="result-value" id="result-lattes-id"></span>
+
+                    <span class="result-label">&Uacute;ltima atualiza&ccedil;&atilde;o:</span>
+                    <span class="result-value" id="result-update"></span>
+                </div>
+
+                <ul class="counts-list" id="result-counts">
+                    <li>
+                        <span class="count-number" id="count-biblio">0</span>
+                        <span class="count-label">Produ&ccedil;&atilde;o Bibliogr&aacute;fica</span>
+                    </li>
+                    <li>
+                        <span class="count-number" id="count-tech">0</span>
+                        <span class="count-label">Produ&ccedil;&atilde;o T&eacute;cnica</span>
+                    </li>
+                    <li>
+                        <span class="count-number" id="count-other">0</span>
+                        <span class="count-label">Outra Produ&ccedil;&atilde;o</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/upload.js"></script>
+</body>
+</html>

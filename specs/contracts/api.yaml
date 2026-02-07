@@ -1,0 +1,183 @@
+openapi: "3.1.0"
+info:
+  title: smartLattes API
+  version: "1.0.0"
+  description: API for uploading Lattes XML CVs and storing them in MongoDB
+
+servers:
+  - url: http://localhost:8080
+    description: Local development / Docker container
+
+paths:
+  /:
+    get:
+      summary: Homepage
+      description: Serves the main page with navigation menu (Upload CV + Data Explorer placeholder)
+      responses:
+        "200":
+          description: HTML page with navigation menu
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /upload:
+    get:
+      summary: Upload page
+      description: Serves the XML file upload form
+      responses:
+        "200":
+          description: HTML page with file upload form
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/upload:
+    post:
+      summary: Upload Lattes XML
+      description: |
+        Accepts a Lattes XML file, validates it, converts to JSON, and stores in MongoDB.
+        Uses NUMERO-IDENTIFICADOR as the document _id (upsert behavior).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Lattes XML file (max 10MB, ISO-8859-1 encoded)
+      responses:
+        "200":
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadSuccess"
+        "400":
+          description: Invalid file (not XML, not Lattes format, empty, or exceeds size limit)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: File exceeds 10MB size limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: MongoDB unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /explorer:
+    get:
+      summary: Data Explorer placeholder
+      description: Placeholder page for future data presentation feature
+      responses:
+        "200":
+          description: HTML page with "coming soon" message
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns application and MongoDB connection status
+      responses:
+        "200":
+          description: Application healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: MongoDB unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+components:
+  schemas:
+    UploadSuccess:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "CV importado com sucesso"
+        updated:
+          type: boolean
+          description: true if an existing record was replaced
+          example: false
+        data:
+          type: object
+          required:
+            - lattesId
+            - name
+            - lastUpdate
+          properties:
+            lattesId:
+              type: string
+              example: "8334174268306003"
+            name:
+              type: string
+              example: "Eduardo Couto Dalcin"
+            lastUpdate:
+              type: string
+              description: "DATA-ATUALIZACAO from the XML (format: DDMMYYYY)"
+              example: "03012026"
+            counts:
+              type: object
+              description: Count of items in each production section
+              properties:
+                bibliographicProduction:
+                  type: integer
+                  example: 42
+                technicalProduction:
+                  type: integer
+                  example: 15
+                otherProduction:
+                  type: integer
+                  example: 3
+
+    Error:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Arquivo inválido: elemento raiz CURRICULO-VITAE não encontrado"
+
+    Health:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        mongodb:
+          type: string
+          enum: [connected, disconnected]
