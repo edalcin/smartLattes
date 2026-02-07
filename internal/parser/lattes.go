@@ -58,7 +58,7 @@ func Parse(data []byte) (*ParseResult, error) {
 
 	doc := make(map[string]interface{})
 	for _, attr := range root.Attr {
-		doc["@"+attr.Name.Local] = attr.Value
+		doc[attr.Name.Local] = attr.Value
 	}
 
 	if err := parseChildren(decoder, doc); err != nil {
@@ -88,7 +88,7 @@ func parseChildren(decoder *xml.Decoder, parent map[string]interface{}) error {
 		case xml.StartElement:
 			child := make(map[string]interface{})
 			for _, attr := range t.Attr {
-				child["@"+attr.Name.Local] = attr.Value
+				child[attr.Name.Local] = attr.Value
 			}
 
 			if err := parseChildren(decoder, child); err != nil {
@@ -123,11 +123,11 @@ func parseChildren(decoder *xml.Decoder, parent map[string]interface{}) error {
 func extractSummary(cv map[string]interface{}, lattesID string) Summary {
 	s := Summary{
 		LattesID:   lattesID,
-		LastUpdate: stringField(cv, "@DATA-ATUALIZACAO"),
+		LastUpdate: stringField(cv, "DATA-ATUALIZACAO"),
 	}
 
 	if dg, ok := cv["DADOS-GERAIS"].(map[string]interface{}); ok {
-		s.Name = stringField(dg, "@NOME-COMPLETO")
+		s.Name = stringField(dg, "NOME-COMPLETO")
 	}
 
 	s.Counts.BibliographicProduction = countProduction(cv, "PRODUCAO-BIBLIOGRAFICA")
@@ -144,10 +144,7 @@ func countProduction(cv map[string]interface{}, sectionKey string) int {
 	}
 
 	count := 0
-	for key, val := range section {
-		if key[0] == '@' {
-			continue
-		}
+	for _, val := range section {
 		count += countItems(val)
 	}
 	return count
@@ -161,7 +158,7 @@ func countItems(v interface{}) int {
 		count := 0
 		hasChildElements := false
 		for key, child := range val {
-			if key[0] == '@' || key == "#text" {
+			if key == "#text" {
 				continue
 			}
 			hasChildElements = true
