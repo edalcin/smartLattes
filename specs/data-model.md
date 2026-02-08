@@ -1,14 +1,14 @@
-# Data Model: Lattes XML Upload
+# Data Model: smartLattes
 
-**Date**: 2026-02-07
+**Date**: 2026-02-08
 
 ## MongoDB Collections
 
 ### Collection: `curriculos`
 
-Stores the complete Lattes CV data converted from XML to JSON.
+Stores the Lattes CV data converted from XML to JSON. All attribute keys are stored in lowercase.
 
-**Identity**: `_id` = `NUMERO-IDENTIFICADOR` (string, e.g., `"8334174268306003"`)
+**Identity**: `_id` = `numero-identificador` (string, e.g., `"8334174268306003"`)
 
 **Document structure**:
 
@@ -20,57 +20,95 @@ Stores the complete Lattes CV data converted from XML to JSON.
     "originalFilename": "8334174268306003.xml",
     "fileSize": 311296
   },
-  "CURRICULO-VITAE": {
-    "@SISTEMA-ORIGEM-XML": "LATTES_OFFLINE",
-    "@NUMERO-IDENTIFICADOR": "8334174268306003",
-    "@DATA-ATUALIZACAO": "03012026",
-    "@HORA-ATUALIZACAO": "200803",
-    "DADOS-GERAIS": {
-      "@NOME-COMPLETO": "Eduardo Couto Dalcin",
-      "@NOME-EM-CITACOES-BIBLIOGRAFICAS": "DALCIN, E. C.;DALCIN, EDUARDO;...",
-      "@NACIONALIDADE": "B",
-      "RESUMO-CV": { ... },
-      "ENDERECO": { ... },
-      "FORMACAO-ACADEMICA-TITULACAO": { ... },
-      "ATUACOES-PROFISSIONAIS": { ... },
-      "AREAS-DE-ATUACAO": { ... },
-      "IDIOMAS": { ... }
+  "curriculo-vitae": {
+    "sistema-origem-xml": "LATTES_OFFLINE",
+    "numero-identificador": "8334174268306003",
+    "data-atualizacao": "03012026",
+    "hora-atualizacao": "200803",
+    "dados-gerais": {
+      "nome-completo": "Eduardo Couto Dalcin",
+      "orcid-id": "0000-0001-5000-0000",
+      "nome-em-citacoes-bibliograficas": "DALCIN, E. C.;DALCIN, EDUARDO;...",
+      "formacao-academica-titulacao": { ... },
+      "atuacoes-profissionais": { ... },
+      "areas-de-atuacao": { ... }
     },
-    "PRODUCAO-BIBLIOGRAFICA": {
-      "TRABALHOS-EM-EVENTOS": { ... },
-      "ARTIGOS-PUBLICADOS": { ... },
-      "LIVROS-E-CAPITULOS": { ... },
-      "TEXTOS-EM-JORNAIS-OU-REVISTAS": { ... }
+    "producao-bibliografica": {
+      "trabalhos-em-eventos": { ... },
+      "artigos-publicados": { ... },
+      "livros-e-capitulos": { ... },
+      "textos-em-jornais-ou-revistas": { ... }
     },
-    "PRODUCAO-TECNICA": {
-      "SOFTWARE": [ ... ],
-      "TRABALHO-TECNICO": [ ... ]
+    "producao-tecnica": {
+      "software": [ ... ],
+      "trabalho-tecnico": [ ... ]
     },
-    "OUTRA-PRODUCAO": { ... },
-    "DADOS-COMPLEMENTARES": { ... }
+    "outra-producao": { ... },
+    "dados-complementares": { ... }
   }
 }
 ```
 
+**Filtered fields in `dados-gerais`**: Only the following keys are stored (all others are discarded to exclude personal/sensitive data):
+- `nome-completo`
+- `orcid-id`
+- `nome-em-citacoes-bibliograficas`
+- `formacao-academica-titulacao`
+- `atuacoes-profissionais`
+- `areas-de-atuacao`
+
+**Discarded data** (never stored): CPF, RG, passport, nationality, gender, race, address, phone, etc.
+
 **Indexes**:
-- `_id` (default unique index on NUMERO-IDENTIFICADOR)
-- No additional indexes needed for the upload feature
+- `_id` (default unique index on numero-identificador)
 
 **Conventions**:
-- XML attributes are prefixed with `@` (e.g., `@NOME-COMPLETO`)
+- All keys are stored in lowercase (e.g., `nome-completo`, `producao-bibliografica`)
 - XML child elements become nested objects or arrays
-- When an element repeats (e.g., multiple `SOFTWARE` entries), they become an array
+- When an element repeats (e.g., multiple `software` entries), they become an array
 - `_metadata` field stores upload tracking info (not from the XML itself)
+
+### Collection: `resumos`
+
+Stores AI-generated researcher summaries (transformation context).
+
+**Identity**: `_id` = `lattesID` (string, same as `numero-identificador` from `curriculos`)
+
+**Document structure**:
+
+```json
+{
+  "_id": "8334174268306003",
+  "_metadata": {
+    "generatedAt": "2026-02-08T10:30:00Z",
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-5-20250929"
+  },
+  "resumo": "# Resumo do Pesquisador\n\n..."
+}
+```
+
+**Fields**:
+- `_id`: lattesID do pesquisador (chave primaria, mesma de `curriculos`)
+- `_metadata.generatedAt`: timestamp UTC da geracao
+- `_metadata.provider`: provedor de IA utilizado (`gemini`, `openai`, `anthropic`)
+- `_metadata.model`: modelo especifico utilizado
+- `resumo`: texto do resumo gerado em formato Markdown
+
+**Indexes**:
+- `_id` (default unique index on lattesID)
 
 ### Upsert Behavior
 
+Applies to both `curriculos` and `resumos` collections:
+
 - **Insert**: If no document with the given `_id` exists, create it
-- **Replace**: If a document with the given `_id` exists, replace it entirely with the new data (including updated `_metadata.uploadedAt`)
+- **Replace**: If a document with the given `_id` exists, replace it entirely
 - MongoDB operation: `ReplaceOne` with `upsert: true`
 
 ### Data Lifecycle
 
-- Documents are created on first upload
-- Documents are fully replaced on re-upload (no partial updates)
+- `curriculos`: Documents are created on first upload and fully replaced on re-upload
+- `resumos`: Documents are created on first generation and replaced on re-generation
 - No deletion mechanism in the current feature scope
 - No TTL or expiration policy

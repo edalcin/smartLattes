@@ -1,8 +1,8 @@
 openapi: "3.1.0"
 info:
   title: smartLattes API
-  version: "1.0.0"
-  description: API for uploading Lattes XML CVs and storing them in MongoDB
+  version: "2.0.0"
+  description: API for uploading Lattes XML CVs, generating AI-powered researcher summaries, and exporting documents
 
 servers:
   - url: http://localhost:8080
@@ -12,7 +12,7 @@ paths:
   /:
     get:
       summary: Homepage
-      description: Serves the main page with navigation menu (Upload CV + Data Explorer placeholder)
+      description: Main page with navigation menu (Enviar CV, Gerar Resumo, Explorar Dados)
       responses:
         "200":
           description: HTML page with navigation menu
@@ -24,10 +24,34 @@ paths:
   /upload:
     get:
       summary: Upload page
-      description: Serves the XML file upload form
+      description: XML file upload form
       responses:
         "200":
           description: HTML page with file upload form
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /resumo:
+    get:
+      summary: Summary generation page
+      description: Dedicated page for searching CVs and generating AI summaries
+      responses:
+        "200":
+          description: HTML page with CV search and summary generation form
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /explorer:
+    get:
+      summary: Data Explorer placeholder
+      description: Placeholder page for future data presentation feature
+      responses:
+        "200":
+          description: HTML page with "coming soon" message
           content:
             text/html:
               schema:
@@ -37,8 +61,8 @@ paths:
     post:
       summary: Upload Lattes XML
       description: |
-        Accepts a Lattes XML file, validates it, converts to JSON, and stores in MongoDB.
-        Uses NUMERO-IDENTIFICADOR as the document _id (upsert behavior).
+        Accepts a Lattes XML file, validates it, converts to JSON (lowercase keys,
+        filtered dados-gerais), and stores in MongoDB curriculos collection.
       requestBody:
         required: true
         content:
@@ -60,13 +84,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/UploadSuccess"
         "400":
-          description: Invalid file (not XML, not Lattes format, empty, or exceeds size limit)
+          description: Invalid file
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "413":
-          description: File exceeds 10MB size limit
+          description: File exceeds 10MB
           content:
             application/json:
               schema:
@@ -78,17 +102,185 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /explorer:
+  /api/search:
     get:
-      summary: Data Explorer placeholder
-      description: Placeholder page for future data presentation feature
+      summary: Search CVs
+      description: Search uploaded CVs by lattesID or researcher name
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query (lattesID or partial name, min 3 characters)
+          schema:
+            type: string
+            minLength: 3
       responses:
         "200":
-          description: HTML page with "coming soon" message
+          description: Search results
           content:
-            text/html:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+        "400":
+          description: Query too short
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: MongoDB unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/models:
+    post:
+      summary: List AI models
+      description: |
+        Lists available models for the given AI provider and API key.
+        Validates the key and returns only chat/completion-capable models.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelsRequest"
+      responses:
+        "200":
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelsResponse"
+        "400":
+          description: Missing or invalid provider/key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/summary:
+    post:
+      summary: Generate researcher summary
+      description: |
+        Generates an AI-powered summary for the researcher identified by lattesID.
+        Reads CV data from MongoDB, applies the prompt from resumoPrompt.md,
+        and calls the selected AI provider. Truncates data if it exceeds
+        model token limits (with warning).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryRequest"
+      responses:
+        "200":
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+        "400":
+          description: Missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: CV not found for given lattesID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "504":
+          description: AI provider timeout (120s)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/summary/save:
+    post:
+      summary: Save generated summary
+      description: |
+        Stores the generated summary in the resumos MongoDB collection.
+        Called after user confirms (Ok or download).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveSummaryRequest"
+      responses:
+        "200":
+          description: Summary saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveSummaryResponse"
+        "400":
+          description: Missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: MongoDB unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/download/{lattesID}:
+    get:
+      summary: Download summary
+      description: Downloads the stored summary in the requested format
+      parameters:
+        - name: lattesID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [md, docx, pdf]
+      responses:
+        "200":
+          description: File download
+          content:
+            text/markdown:
               schema:
                 type: string
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Summary not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /api/health:
     get:
@@ -125,7 +317,6 @@ components:
         updated:
           type: boolean
           description: true if an existing record was replaced
-          example: false
         data:
           type: object
           required:
@@ -141,11 +332,9 @@ components:
               example: "Eduardo Couto Dalcin"
             lastUpdate:
               type: string
-              description: "DATA-ATUALIZACAO from the XML (format: DDMMYYYY)"
               example: "03012026"
             counts:
               type: object
-              description: Count of items in each production section
               properties:
                 bibliographicProduction:
                   type: integer
@@ -156,6 +345,132 @@ components:
                 otherProduction:
                   type: integer
                   example: 3
+
+    SearchResults:
+      type: object
+      required:
+        - success
+        - results
+      properties:
+        success:
+          type: boolean
+          example: true
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              lattesId:
+                type: string
+                example: "8334174268306003"
+              name:
+                type: string
+                example: "Eduardo Couto Dalcin"
+
+    ModelsRequest:
+      type: object
+      required:
+        - provider
+        - apiKey
+      properties:
+        provider:
+          type: string
+          enum: [openai, anthropic, gemini]
+        apiKey:
+          type: string
+
+    ModelsResponse:
+      type: object
+      required:
+        - success
+        - models
+      properties:
+        success:
+          type: boolean
+          example: true
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: "gpt-4o"
+              displayName:
+                type: string
+                example: "GPT-4o"
+
+    SummaryRequest:
+      type: object
+      required:
+        - lattesId
+        - provider
+        - apiKey
+        - model
+      properties:
+        lattesId:
+          type: string
+        provider:
+          type: string
+          enum: [openai, anthropic, gemini]
+        apiKey:
+          type: string
+        model:
+          type: string
+
+    SummaryResponse:
+      type: object
+      required:
+        - success
+        - summary
+      properties:
+        success:
+          type: boolean
+          example: true
+        summary:
+          type: string
+          description: Generated Markdown summary
+        truncated:
+          type: boolean
+          description: True if CV data was truncated to fit model limits
+        truncationWarning:
+          type: string
+          description: Warning message when data was truncated
+        provider:
+          type: string
+          example: "anthropic"
+        model:
+          type: string
+          example: "claude-sonnet-4-5-20250929"
+
+    SaveSummaryRequest:
+      type: object
+      required:
+        - lattesId
+        - summary
+        - provider
+        - model
+      properties:
+        lattesId:
+          type: string
+        summary:
+          type: string
+        provider:
+          type: string
+        model:
+          type: string
+
+    SaveSummaryResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Resumo salvo com sucesso"
 
     Error:
       type: object
@@ -168,7 +483,6 @@ components:
           example: false
         error:
           type: string
-          example: "Arquivo inválido: elemento raiz CURRICULO-VITAE não encontrado"
 
     Health:
       type: object

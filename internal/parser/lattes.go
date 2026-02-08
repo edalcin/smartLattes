@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 
 	"golang.org/x/text/encoding/charmap"
 )
@@ -58,15 +59,17 @@ func Parse(data []byte) (*ParseResult, error) {
 
 	doc := make(map[string]interface{})
 	for _, attr := range root.Attr {
-		doc[attr.Name.Local] = attr.Value
+		doc[strings.ToLower(attr.Name.Local)] = attr.Value
 	}
 
 	if err := parseChildren(decoder, doc); err != nil {
 		return nil, fmt.Errorf("erro ao processar XML: %w", err)
 	}
 
+	filterDadosGerais(doc)
+
 	fullDoc := map[string]interface{}{
-		"CURRICULO-VITAE": doc,
+		"curriculo-vitae": doc,
 	}
 
 	summary := extractSummary(doc, lattesID)
@@ -88,14 +91,14 @@ func parseChildren(decoder *xml.Decoder, parent map[string]interface{}) error {
 		case xml.StartElement:
 			child := make(map[string]interface{})
 			for _, attr := range t.Attr {
-				child[attr.Name.Local] = attr.Value
+				child[strings.ToLower(attr.Name.Local)] = attr.Value
 			}
 
 			if err := parseChildren(decoder, child); err != nil {
 				return err
 			}
 
-			name := t.Name.Local
+			name := strings.ToLower(t.Name.Local)
 			existing, exists := parent[name]
 			if !exists {
 				parent[name] = child
@@ -120,19 +123,40 @@ func parseChildren(decoder *xml.Decoder, parent map[string]interface{}) error {
 	}
 }
 
+var dadosGeraisAllowed = map[string]bool{
+	"nome-completo":                   true,
+	"orcid-id":                        true,
+	"nome-em-citacoes-bibliograficas": true,
+	"formacao-academica-titulacao":    true,
+	"atuacoes-profissionais":          true,
+	"areas-de-atuacao":                true,
+}
+
+func filterDadosGerais(cv map[string]interface{}) {
+	dg, ok := cv["dados-gerais"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	for key := range dg {
+		if !dadosGeraisAllowed[key] {
+			delete(dg, key)
+		}
+	}
+}
+
 func extractSummary(cv map[string]interface{}, lattesID string) Summary {
 	s := Summary{
 		LattesID:   lattesID,
-		LastUpdate: stringField(cv, "DATA-ATUALIZACAO"),
+		LastUpdate: stringField(cv, "data-atualizacao"),
 	}
 
-	if dg, ok := cv["DADOS-GERAIS"].(map[string]interface{}); ok {
-		s.Name = stringField(dg, "NOME-COMPLETO")
+	if dg, ok := cv["dados-gerais"].(map[string]interface{}); ok {
+		s.Name = stringField(dg, "nome-completo")
 	}
 
-	s.Counts.BibliographicProduction = countProduction(cv, "PRODUCAO-BIBLIOGRAFICA")
-	s.Counts.TechnicalProduction = countProduction(cv, "PRODUCAO-TECNICA")
-	s.Counts.OtherProduction = countProduction(cv, "OUTRA-PRODUCAO")
+	s.Counts.BibliographicProduction = countProduction(cv, "producao-bibliografica")
+	s.Counts.TechnicalProduction = countProduction(cv, "producao-tecnica")
+	s.Counts.OtherProduction = countProduction(cv, "outra-producao")
 
 	return s
 }

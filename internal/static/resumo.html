@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerar Resumo - smartLattes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">smart<span>Lattes</span></a>
+        <ul class="navbar-nav">
+            <li><a href="/upload">Enviar CV</a></li>
+            <li><a href="/resumo" class="active">Gerar Resumo</a></li>
+            <li><a href="/explorer">Explorar Dados</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="card">
+            <h2>Gerar Resumo do Pesquisador</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
+                Busque um curr&iacute;culo e gere um resumo anal&iacute;tico utilizando intelig&ecirc;ncia artificial.
+            </p>
+
+            <!-- Search Section -->
+            <div id="search-section">
+                <div class="form-group">
+                    <label for="search-input">Buscar por nome ou ID Lattes</label>
+                    <input type="text" id="search-input" class="form-input" placeholder="Digite pelo menos 3 caracteres...">
+                </div>
+                <div id="search-results" class="search-results"></div>
+            </div>
+
+            <!-- Selected CV info -->
+            <div id="selected-cv" class="selected-cv" style="display:none;">
+                <h3>CV Selecionado</h3>
+                <div class="result-grid">
+                    <span class="result-label">Nome:</span>
+                    <span class="result-value" id="selected-name"></span>
+                    <span class="result-label">ID Lattes:</span>
+                    <span class="result-value" id="selected-lattes-id"></span>
+                </div>
+            </div>
+
+            <!-- AI Config Section -->
+            <div id="ai-config" style="display:none;">
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--color-border);">
+                <h3 style="margin-bottom: 1rem;">Configura&ccedil;&atilde;o da IA</h3>
+
+                <div class="form-group">
+                    <label for="provider-select">Provedor</label>
+                    <select id="provider-select" class="form-input">
+                        <option value="">Selecione o provedor...</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="api-key-input">Chave de API</label>
+                    <input type="password" id="api-key-input" class="form-input" placeholder="Digite sua chave de API...">
+                </div>
+
+                <button type="button" id="load-models-btn" class="btn btn-primary" disabled>
+                    Carregar Modelos
+                </button>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="model-select">Modelo</label>
+                    <select id="model-select" class="form-input" disabled>
+                        <option value="">Selecione o modelo...</option>
+                    </select>
+                </div>
+
+                <button type="button" id="generate-btn" class="btn btn-primary" disabled>
+                    Gerar Resumo
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div class="spinner" id="spinner"></div>
+            <p id="loading-message" class="loading-message" style="display:none;">Gerando resumo, isso pode levar at&eacute; 2 minutos...</p>
+
+            <!-- Error -->
+            <div id="error-message" class="message message-error"></div>
+
+            <!-- Summary Display -->
+            <div id="summary-section" style="display:none;">
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--color-border);">
+                <div id="truncation-warning" class="message message-warning" style="display:none;"></div>
+                <div id="summary-content" class="summary-content"></div>
+
+                <div class="download-actions">
+                    <button type="button" class="btn btn-secondary" id="download-md">Baixar .md</button>
+                    <button type="button" class="btn btn-secondary" id="download-docx">Baixar .docx</button>
+                    <button type="button" class="btn btn-secondary" id="download-pdf">Baixar .pdf</button>
+                    <button type="button" class="btn btn-primary" id="save-btn">Ok</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/resumo.js"></script>
+</body>
+</html>

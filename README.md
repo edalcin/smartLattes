@@ -26,11 +26,23 @@ O smartLattes opera sob dois princípios fundamentais:
 
 ## Arquitetura
 
-O projeto segue o modelo de contextos do [C4 Model](https://c4model.com/), organizando-se em dois contextos funcionais:
+O projeto segue o modelo de contextos do [C4 Model](https://c4model.com/), organizando-se em três contextos funcionais:
 
-### Contexto de Aquisição (atual)
+### Contexto de Aquisição
 
-Responsável pela ingestão dos dados. O pesquisador acessa a interface web, faz upload do arquivo XML de seu currículo Lattes, e o sistema converte o XML para uma estrutura JSON que é armazenada no banco de dados MongoDB. Este é o contexto atualmente implementado.
+Responsável pela ingestão dos dados. O pesquisador acessa a interface web, faz upload do arquivo XML de seu currículo Lattes, e o sistema converte o XML para uma estrutura JSON que é armazenada no banco de dados MongoDB.
+
+### Contexto de Transformação
+
+Responsável pela geração de resumos analíticos de pesquisadores utilizando Inteligência Artificial. O sistema integra-se com três provedores de IA (OpenAI, Anthropic e Google Gemini) via chamadas REST diretas, sem SDKs. O usuário fornece sua própria chave de API (nunca armazenada), seleciona o modelo desejado, e o sistema gera um resumo estruturado contendo:
+
+- **Perfil e Principais Características** — trajetória acadêmica e pontos fortes
+- **Áreas de Especialidade** — lista hierárquica de áreas de atuação
+- **Potencial de Contribuição Científica** — relevância e impacto potencial
+- **Coautores Mais Frequentes** — tabela com os 15 coautores mais frequentes
+- **Produção Quantificada por Área** — tabela com produção por área de especialidade
+
+Os resumos gerados são armazenados no MongoDB e podem ser baixados em formato Markdown (.md).
 
 ### Contexto de Apresentação (futuro)
 
@@ -43,52 +55,52 @@ Responsável pela visualização e análise dos dados armazenados. Este contexto
 | **Backend** | Go 1.23 | Linguagem compilada que produz binários estáticos, resultando em imagens Docker extremamente leves (~25-35 MB). Biblioteca padrão robusta para HTTP e XML. |
 | **Frontend** | HTML/CSS/JS (vanilla) | Embutido no binário via `go:embed`. Sem dependências externas, sem etapa de build frontend, sem framework. |
 | **Banco de Dados** | MongoDB | Modelo de documentos flexível, ideal para armazenar a estrutura hierárquica e variável dos currículos Lattes sem necessidade de schema rígido. |
+| **IA** | OpenAI, Anthropic, Gemini | Integração via REST API direto (`net/http`), sem SDKs. Chaves de API fornecidas pelo usuário a cada uso. |
 | **Containerização** | Docker (Alpine) | Imagem multi-stage com base Alpine (~7 MB), publicada em `ghcr.io/edalcin/smartlattes`. |
 | **Deploy** | Unraid | Container gerenciado via interface web do Unraid, sem necessidade de orquestração. |
 
 ## Como Funciona
 
-```
-Pesquisador                    smartLattes                     MongoDB
-    |                              |                              |
-    |  1. Exporta XML do Lattes    |                              |
-    |  2. Upload via interface web |                              |
-    |----------------------------->|                              |
-    |                              |  3. Decodifica ISO-8859-1    |
-    |                              |  4. Valida XML Lattes        |
-    |                              |  5. Converte XML → JSON      |
-    |                              |  6. Upsert no MongoDB        |
-    |                              |----------------------------->|
-    |                              |  7. Confirmação              |
-    |                              |<-----------------------------|
-    |  8. Exibe resumo do CV       |                              |
-    |<-----------------------------|                              |
-```
+### Upload de CV
 
 1. O pesquisador exporta seu currículo da Plataforma Lattes em formato XML
 2. Acessa a interface web do smartLattes e faz upload do arquivo
 3. O sistema decodifica o arquivo (ISO-8859-1, padrão do Lattes)
 4. Valida a estrutura XML (elemento raiz `CURRICULO-VITAE`, atributo `NUMERO-IDENTIFICADOR`)
-5. Converte recursivamente toda a árvore XML para uma estrutura JSON genérica
+5. Converte recursivamente toda a árvore XML para uma estrutura JSON genérica (chaves em minúsculas)
 6. Armazena o documento no MongoDB usando o `NUMERO-IDENTIFICADOR` como chave única (upsert)
-7. Recebe confirmação do banco de dados
-8. Exibe ao pesquisador um resumo com nome, ID Lattes, data de atualização e contagens de produção
+7. Exibe ao pesquisador um resumo com nome, ID Lattes, data de atualização e contagens de produção
+
+### Geração de Resumo por IA
+
+1. O usuário busca um currículo por nome ou ID Lattes (via página "Gerar Resumo" ou após upload)
+2. Seleciona o provedor de IA (OpenAI, Anthropic ou Google Gemini)
+3. Fornece sua chave de API (transiente, nunca armazenada)
+4. Clica em "Carregar Modelos" para listar os modelos disponíveis
+5. Seleciona o modelo e clica em "Gerar Resumo"
+6. O sistema envia os dados do CV ao provedor de IA com um prompt estruturado
+7. O resumo gerado é exibido na tela e pode ser baixado em formato Markdown
+8. Ao confirmar, o resumo é salvo na coleção `resumos` do MongoDB
 
 ## Estrutura do Projeto
 
 ```
 smartLattes/
-├── cmd/smartlattes/main.go       # Ponto de entrada da aplicação
+├── cmd/smartlattes/
+│   ├── main.go                  # Ponto de entrada, rotas, graceful shutdown
+│   └── resumoPrompt.md          # Prompt de IA para geração de resumos
 ├── internal/
-│   ├── handler/                  # Handlers HTTP (upload, health, páginas)
-│   ├── parser/                   # Parser XML → JSON (genérico, recursivo)
-│   ├── store/                    # Cliente MongoDB (conexão, upsert, ping)
-│   └── static/                   # Arquivos estáticos (HTML, CSS, JS)
-├── docs/                         # Arquivo XML de exemplo para testes
-├── specs/                        # Especificações e artefatos de design
-├── Dockerfile                    # Build multi-stage
-├── go.mod                        # Dependências Go
-├── .env.example                  # Template de variáveis de ambiente
+│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, download, health)
+│   ├── parser/                  # Parser XML → JSON (genérico, recursivo)
+│   ├── store/                   # Cliente MongoDB (curriculos + resumos)
+│   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini)
+│   ├── export/                  # Exportação de documentos (Markdown)
+│   └── static/                  # Arquivos estáticos (HTML, CSS, JS)
+├── docs/                        # Arquivo XML de exemplo para testes
+├── specs/                       # Especificações e artefatos de design
+├── Dockerfile                   # Build multi-stage
+├── go.mod                       # Dependências Go
+├── .env.example                 # Template de variáveis de ambiente
 └── README.md
 ```
 

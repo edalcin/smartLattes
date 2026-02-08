@@ -9,6 +9,29 @@
     var successMsg = document.getElementById('success-message');
     var resultCard = document.getElementById('result-card');
 
+    // AI elements
+    var aiSection = document.getElementById('ai-section');
+    var providerSelect = document.getElementById('provider-select');
+    var apiKeyInput = document.getElementById('api-key-input');
+    var loadModelsBtn = document.getElementById('load-models-btn');
+    var modelSelect = document.getElementById('model-select');
+    var generateBtn = document.getElementById('generate-btn');
+    var aiSpinner = document.getElementById('ai-spinner');
+    var aiLoadingMsg = document.getElementById('ai-loading-message');
+    var aiError = document.getElementById('ai-error');
+    var summarySection = document.getElementById('summary-section');
+    var truncationWarning = document.getElementById('truncation-warning');
+    var summaryContent = document.getElementById('summary-content');
+    var downloadMd = document.getElementById('download-md');
+    var downloadDocx = document.getElementById('download-docx');
+    var downloadPdf = document.getElementById('download-pdf');
+    var saveBtn = document.getElementById('save-btn');
+
+    var currentLattesId = '';
+    var currentSummary = '';
+    var currentProvider = '';
+    var currentModel = '';
+
     dropZone.addEventListener('click', function () {
         fileInput.click();
     });
@@ -119,6 +142,12 @@
             }
 
             resultCard.classList.add('visible');
+
+            // Show AI section and store lattesId
+            currentLattesId = data.data.lattesId;
+            if (aiSection) {
+                aiSection.style.display = 'block';
+            }
         }
     }
 
@@ -126,6 +155,8 @@
         errorMsg.classList.remove('visible');
         successMsg.classList.remove('visible');
         resultCard.classList.remove('visible');
+        if (aiSection) aiSection.style.display = 'none';
+        if (summarySection) summarySection.style.display = 'none';
     }
 
     function formatDate(dateStr) {
@@ -136,5 +167,190 @@
         var month = dateStr.substring(2, 4);
         var year = dateStr.substring(4, 8);
         return day + '/' + month + '/' + year;
+    }
+
+    // AI Section handlers (only if elements exist)
+    if (providerSelect && apiKeyInput && loadModelsBtn) {
+        providerSelect.addEventListener('change', checkLoadModels);
+        apiKeyInput.addEventListener('input', checkLoadModels);
+
+        function checkLoadModels() {
+            loadModelsBtn.disabled = !(providerSelect.value && apiKeyInput.value.length >= 10);
+        }
+
+        loadModelsBtn.addEventListener('click', function () {
+            hideAiError();
+            loadModelsBtn.disabled = true;
+            aiSpinner.classList.add('visible');
+
+            fetch('/api/models', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    provider: providerSelect.value,
+                    apiKey: apiKeyInput.value
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                aiSpinner.classList.remove('visible');
+                loadModelsBtn.disabled = false;
+
+                if (!data.success) {
+                    showAiError(data.error || 'Erro ao carregar modelos');
+                    return;
+                }
+
+                modelSelect.innerHTML = '<option value="">Selecione o modelo...</option>';
+                for (var i = 0; i < data.models.length; i++) {
+                    var opt = document.createElement('option');
+                    opt.value = data.models[i].id;
+                    opt.textContent = data.models[i].displayName || data.models[i].id;
+                    modelSelect.appendChild(opt);
+                }
+                modelSelect.disabled = false;
+            })
+            .catch(function () {
+                aiSpinner.classList.remove('visible');
+                loadModelsBtn.disabled = false;
+                showAiError('Erro de conexão ao carregar modelos');
+            });
+        });
+
+        modelSelect.addEventListener('change', function () {
+            generateBtn.disabled = !modelSelect.value;
+        });
+
+        generateBtn.addEventListener('click', function () {
+            hideAiError();
+            generateBtn.disabled = true;
+            aiSpinner.classList.add('visible');
+            aiLoadingMsg.style.display = 'block';
+            summarySection.style.display = 'none';
+
+            currentProvider = providerSelect.value;
+            currentModel = modelSelect.value;
+
+            fetch('/api/summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lattesId: currentLattesId,
+                    provider: currentProvider,
+                    apiKey: apiKeyInput.value,
+                    model: currentModel
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                aiSpinner.classList.remove('visible');
+                aiLoadingMsg.style.display = 'none';
+                generateBtn.disabled = false;
+
+                if (!data.success) {
+                    showAiError(data.error || 'Erro ao gerar resumo');
+                    return;
+                }
+
+                currentSummary = data.summary;
+
+                if (data.truncated) {
+                    truncationWarning.textContent = data.truncationWarning;
+                    truncationWarning.style.display = 'block';
+                } else {
+                    truncationWarning.style.display = 'none';
+                }
+
+                summaryContent.innerHTML = renderMarkdown(data.summary);
+                summarySection.style.display = 'block';
+            })
+            .catch(function () {
+                aiSpinner.classList.remove('visible');
+                aiLoadingMsg.style.display = 'none';
+                generateBtn.disabled = false;
+                showAiError('Erro de conexão ao gerar resumo');
+            });
+        });
+
+        downloadMd.addEventListener('click', function () {
+            window.open('/api/download/' + currentLattesId + '?format=md', '_blank');
+            saveSummary();
+        });
+        downloadDocx.addEventListener('click', function () {
+            window.open('/api/download/' + currentLattesId + '?format=docx', '_blank');
+            saveSummary();
+        });
+        downloadPdf.addEventListener('click', function () {
+            window.open('/api/download/' + currentLattesId + '?format=pdf', '_blank');
+            saveSummary();
+        });
+        saveBtn.addEventListener('click', function () {
+            saveSummary();
+        });
+    }
+
+    function saveSummary() {
+        fetch('/api/summary/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                lattesId: currentLattesId,
+                summary: currentSummary,
+                provider: currentProvider,
+                model: currentModel
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success && saveBtn) {
+                saveBtn.textContent = 'Salvo!';
+                setTimeout(function () { saveBtn.textContent = 'Ok'; }, 2000);
+            }
+        })
+        .catch(function () { });
+    }
+
+    function showAiError(message) {
+        if (aiError) {
+            aiError.textContent = message;
+            aiError.classList.add('visible');
+        }
+    }
+
+    function hideAiError() {
+        if (aiError) {
+            aiError.classList.remove('visible');
+        }
+    }
+
+    function renderMarkdown(md) {
+        var html = md
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+        html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        html = html.replace(/^\|(.+)\|$/gm, function (match, content) {
+            var cells = content.split('|').map(function (c) { return c.trim(); });
+            return '<tr>' + cells.map(function (c) {
+                if (/^[-:]+$/.test(c)) return '';
+                return '<td>' + c + '</td>';
+            }).join('') + '</tr>';
+        });
+        html = html.replace(/((?:<tr>.*?<\/tr>\n?)+)/g, '<table class="summary-table">$1</table>');
+        html = html.replace(/<tr><\/tr>/g, '');
+
+        html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+        html = html.replace(/((?:<li>.*?<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+        html = html.replace(/^(?!<[hultd])(.+)$/gm, '<p>$1</p>');
+        html = html.replace(/<p>\s*<\/p>/g, '');
+
+        return html;
     }
 })();

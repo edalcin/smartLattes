@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.23+ installed (apenas para desenvolvimento local)
+- Go 1.23+ instalado (apenas para desenvolvimento local)
 - Acesso ao MongoDB em `192.168.1.10:27017`
 
 ## Local Development
@@ -110,7 +110,8 @@ Clique em **Add another Path, Port, Variable, Label or Device** e selecione **Va
 
 - Acesse `http://<ip-do-unraid>:8080` no navegador
 - A homepage do smartLattes deve aparecer com o menu de navegacao
-- Clique em "Upload CV" e faca upload do arquivo XML de teste
+- Clique em "Enviar CV" e faca upload do arquivo XML de teste
+- Clique em "Gerar Resumo" para acessar a pagina de geracao de resumos
 
 ### Atualizando o container
 
@@ -133,8 +134,21 @@ Quando uma nova versao da imagem for publicada no ghcr.io:
 # Run all tests
 go test ./...
 
-# Test with the example XML file
+# Test upload with the example XML file
 curl -F "file=@docs/8334174268306003.xml" http://localhost:8080/api/upload
+
+# Test CV search
+curl "http://localhost:8080/api/search?q=Dalcin"
+
+# Test model listing (requires valid API key)
+curl -X POST http://localhost:8080/api/models \
+  -H "Content-Type: application/json" \
+  -d '{"provider":"openai","apiKey":"sk-..."}'
+
+# Test summary generation (requires valid API key)
+curl -X POST http://localhost:8080/api/summary \
+  -H "Content-Type: application/json" \
+  -d '{"lattesId":"8334174268306003","provider":"openai","apiKey":"sk-...","model":"gpt-4o"}'
 ```
 
 ## Project Structure
@@ -148,22 +162,39 @@ smartLattes/
 │   ├── handler/
 │   │   ├── upload.go            # Upload endpoint handler
 │   │   ├── pages.go             # HTML page handlers
-│   │   └── health.go            # Health check handler
+│   │   ├── health.go            # Health check handler
+│   │   ├── models.go            # AI model listing handler
+│   │   ├── summary.go           # Summary generation handler
+│   │   ├── search.go            # CV search handler
+│   │   └── download.go          # Summary download handler
 │   ├── parser/
 │   │   └── lattes.go            # XML parsing + JSON conversion
 │   ├── store/
-│   │   └── mongo.go             # MongoDB operations (upsert)
+│   │   └── mongo.go             # MongoDB operations (curriculos + resumos)
+│   ├── ai/
+│   │   ├── provider.go          # AIProvider interface + factory
+│   │   ├── openai.go            # OpenAI implementation
+│   │   ├── anthropic.go         # Anthropic implementation
+│   │   ├── gemini.go            # Gemini implementation
+│   │   └── truncate.go          # Token estimation + truncation
+│   ├── export/
+│   │   ├── markdown.go          # .md export
+│   │   ├── pdf.go               # .pdf generation
+│   │   └── docx.go              # .docx generation
 │   └── static/
 │       ├── index.html           # Homepage with navigation
-│       ├── upload.html          # Upload form page
+│       ├── upload.html          # Upload form + inline summary
+│       ├── resumo.html          # Dedicated summary generation page
 │       ├── explorer.html        # Coming soon placeholder
 │       ├── css/
 │       │   └── style.css        # Application styles
 │       └── js/
-│           └── upload.js        # Upload form behavior
+│           ├── upload.js        # Upload form behavior
+│           └── resumo.js        # Summary page behavior
 ├── docs/
-│   └── 8334174268306003.xml     # Example Lattes XML
+│   └── cvs/                     # Uploaded CVs (gitignored)
 ├── specs/                       # Feature specifications
+├── resumoPrompt.md              # AI prompt for summary generation
 ├── Dockerfile                   # Multi-stage build
 ├── go.mod
 └── go.sum

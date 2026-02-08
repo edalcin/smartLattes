@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,9 @@ import (
 	"github.com/edalcin/smartlattes/internal/static"
 	"github.com/edalcin/smartlattes/internal/store"
 )
+
+//go:embed resumoPrompt.md
+var resumoPrompt string
 
 func main() {
 	mongoURI := os.Getenv("MONGODB_URI")
@@ -57,6 +61,7 @@ func main() {
 	mux.HandleFunc("/", handler.PageHandler("index.html"))
 	mux.HandleFunc("/upload", handler.PageHandler("upload.html"))
 	mux.HandleFunc("/explorer", handler.PageHandler("explorer.html"))
+	mux.HandleFunc("/resumo", handler.PageHandler("resumo.html"))
 	mux.Handle("/static/", http.StripPrefix("/static/", handler.StaticHandler()))
 
 	mux.Handle("/api/upload", &handler.UploadHandler{
@@ -67,11 +72,21 @@ func main() {
 		Store: db,
 	})
 
+	summaryHandler := &handler.SummaryHandler{
+		Store:  db,
+		Prompt: resumoPrompt,
+	}
+	mux.Handle("/api/search", &handler.SearchHandler{Store: db})
+	mux.Handle("/api/models", &handler.ModelsHandler{})
+	mux.Handle("/api/summary", summaryHandler)
+	mux.Handle("/api/summary/save", summaryHandler)
+	mux.Handle("/api/download/", &handler.DownloadHandler{Store: db})
+
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      mux,
 		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		WriteTimeout: 150 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
