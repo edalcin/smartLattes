@@ -26,7 +26,7 @@ O smartLattes opera sob dois princípios fundamentais:
 
 ## Arquitetura
 
-O projeto segue o modelo de contextos do [C4 Model](https://c4model.com/), organizando-se em três contextos funcionais:
+O projeto segue o modelo de contextos do [C4 Model](https://c4model.com/), organizando-se em quatro contextos funcionais:
 
 ### Contexto de Aquisição
 
@@ -44,9 +44,22 @@ Responsável pela geração de resumos analíticos de pesquisadores utilizando I
 
 Os resumos gerados são armazenados no MongoDB e podem ser baixados em formato Markdown (.md).
 
+### Contexto de Análise
+
+Responsável pela identificação de redes de pesquisa e oportunidades de colaboração entre pesquisadores. A partir dos currículos armazenados, o sistema utiliza IA para comparar o perfil de um pesquisador com os demais da base, gerando um relatório estruturado contendo:
+
+- **Áreas de Sinergia** — identificação de convergências temáticas entre pesquisadores
+- **Potenciais Colaborações** — sugestões concretas de projetos, artigos e iniciativas conjuntas
+- **Complementaridade de Competências** — mapeamento de habilidades complementares
+- **Oportunidades de Pesquisa** — lacunas e fronteiras de conhecimento identificadas
+
+A análise é oferecida como fluxo opcional após a geração do resumo (nas páginas "Enviar CV" e "Gerar Resumo") e também como página dedicada ("Analisar Relações"). Os relatórios são armazenados na coleção `relacoes` do MongoDB e podem ser baixados em formato Markdown.
+
+O sistema aplica uma estratégia progressiva de truncamento para respeitar os limites de tokens dos modelos de IA, priorizando os dados do pesquisador atual e reduzindo progressivamente os dados dos demais currículos.
+
 ### Contexto de Apresentação (futuro)
 
-Responsável pela visualização e análise dos dados armazenados. Este contexto permitirá a exploração dos perfis, a visualização de redes de colaboração sugeridas pela IA, e a consulta a produtos de pesquisa recomendados. Está previsto para implementação futura.
+Responsável pela visualização e exploração dos dados armazenados. Este contexto permitirá a navegação interativa pelos perfis, a visualização gráfica de redes de colaboração, e a consulta a produtos de pesquisa recomendados. Está previsto para implementação futura.
 
 ## Stack Tecnológico
 
@@ -82,18 +95,29 @@ Responsável pela visualização e análise dos dados armazenados. Este contexto
 7. O resumo gerado é exibido na tela e pode ser baixado em formato Markdown
 8. Ao confirmar, o resumo é salvo na coleção `resumos` do MongoDB
 
+### Análise de Relações entre Pesquisadores
+
+1. Após gerar um resumo (ou via página dedicada "Analisar Relações"), o usuário pode iniciar a análise
+2. O sistema recupera os dados de todos os currículos armazenados na base
+3. Aplica truncamento progressivo para caber nos limites de tokens do modelo (preservando integralmente o CV atual)
+4. Envia os dados ao provedor de IA com um prompt especializado em identificação de redes
+5. O relatório gerado é exibido na tela e pode ser baixado em formato Markdown
+6. Ao confirmar, o relatório é salvo na coleção `relacoes` do MongoDB
+7. Caso haja apenas um pesquisador na base, o sistema informa que não há outros perfis para comparação (HTTP 409)
+
 ## Estrutura do Projeto
 
 ```
 smartLattes/
 ├── cmd/smartlattes/
 │   ├── main.go                  # Ponto de entrada, rotas, graceful shutdown
-│   └── resumoPrompt.md          # Prompt de IA para geração de resumos
+│   ├── resumoPrompt.md          # Prompt de IA para geração de resumos
+│   └── analisePrompt.md         # Prompt de IA para análise de relações
 ├── internal/
-│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, download, health)
+│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, analysis, download, health)
 │   ├── parser/                  # Parser XML → JSON (genérico, recursivo)
-│   ├── store/                   # Cliente MongoDB (curriculos + resumos)
-│   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini)
+│   ├── store/                   # Cliente MongoDB (curriculos + resumos + relacoes)
+│   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini) + truncamento
 │   ├── export/                  # Exportação de documentos (Markdown)
 │   └── static/                  # Arquivos estáticos (HTML, CSS, JS)
 ├── docs/                        # Arquivo XML de exemplo para testes
