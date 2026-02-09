@@ -531,6 +531,32 @@ body {
     background-color: var(--color-bg);
 }
 
+/* Analysis prompt card */
+.analysis-prompt-card {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: var(--color-primary-light);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius);
+}
+
+/* Success/green button */
+.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #047857;
+}
+
+/* Info message (blue) */
+.message-info {
+    background-color: #dbeafe;
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .navbar {

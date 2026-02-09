@@ -188,3 +188,93 @@ func (m *MongoDB) GetSummary(ctx context.Context, lattesID string) (*SummaryDoc,
 
 	return &doc, nil
 }
+
+type AnalysisMetadata struct {
+	GeneratedAt         time.Time `bson:"generatedAt"`
+	Provider            string    `bson:"provider"`
+	Model               string    `bson:"model"`
+	ResearchersAnalyzed int       `bson:"researchersAnalyzed"`
+}
+
+type AnalysisDoc struct {
+	ID       string           `bson:"_id"`
+	Analise  string           `bson:"analise"`
+	Metadata AnalysisMetadata `bson:"_metadata"`
+}
+
+func (m *MongoDB) CountCVs(ctx context.Context) (int64, error) {
+	collection := m.database.Collection("curriculos")
+	return collection.CountDocuments(ctx, bson.M{})
+}
+
+func (m *MongoDB) GetAllCVSummaries(ctx context.Context, excludeLattesID string) ([]map[string]interface{}, error) {
+	collection := m.database.Collection("curriculos")
+
+	filter := bson.M{"_id": bson.M{"$ne": excludeLattesID}}
+	projection := bson.M{
+		"_id": 1,
+		"curriculo-vitae.dados-gerais.nome-completo":              1,
+		"curriculo-vitae.dados-gerais.areas-de-atuacao":           1,
+		"curriculo-vitae.dados-gerais.formacao-academica-titulacao": 1,
+		"curriculo-vitae.dados-gerais.atuacoes-profissionais":     1,
+		"curriculo-vitae.producao-bibliografica":                   1,
+	}
+	opts := options.Find().SetProjection(projection)
+
+	cursor, err := collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []map[string]interface{}
+	for cursor.Next(ctx) {
+		var doc map[string]interface{}
+		if err := cursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		results = append(results, doc)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (m *MongoDB) UpsertAnalysis(ctx context.Context, lattesID, analysis, provider, model string, researchersAnalyzed int) error {
+	collection := m.database.Collection("relacoes")
+
+	doc := bson.M{
+		"_id":     lattesID,
+		"analise": analysis,
+		"_metadata": bson.M{
+			"generatedAt":         time.Now().UTC(),
+			"provider":            provider,
+			"model":               model,
+			"researchersAnalyzed": researchersAnalyzed,
+		},
+	}
+
+	filter := bson.M{"_id": lattesID}
+	opts := options.Replace().SetUpsert(true)
+
+	_, err := collection.ReplaceOne(ctx, filter, doc, opts)
+	return err
+}
+
+func (m *MongoDB) GetAnalysis(ctx context.Context, lattesID string) (*AnalysisDoc, error) {
+	collection := m.database.Collection("relacoes")
+
+	var doc AnalysisDoc
+	err := collection.FindOne(ctx, bson.M{"_id": lattesID}).Decode(&doc)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("análise não encontrada")
+		}
+		return nil, err
+	}
+
+	return &doc, nil
+}

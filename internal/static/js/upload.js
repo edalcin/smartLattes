@@ -27,6 +27,25 @@
     var downloadPdf = document.getElementById('download-pdf');
     var saveBtn = document.getElementById('save-btn');
 
+    // Analysis elements
+    var analysisPromptSection = document.getElementById('analysis-prompt-section');
+    var analysisYesBtn = document.getElementById('analysis-yes-btn');
+    var analysisNoBtn = document.getElementById('analysis-no-btn');
+    var analysisSection = document.getElementById('analysis-section');
+    var analysisSpinner = document.getElementById('analysis-spinner');
+    var analysisLoadingMsg = document.getElementById('analysis-loading-message');
+    var analysisError = document.getElementById('analysis-error');
+    var analysisInfo = document.getElementById('analysis-info');
+    var analysisResult = document.getElementById('analysis-result');
+    var analysisTruncationWarning = document.getElementById('analysis-truncation-warning');
+    var analysisContent = document.getElementById('analysis-content');
+    var analysisDownloadMd = document.getElementById('analysis-download-md');
+    var analysisDownloadDocx = document.getElementById('analysis-download-docx');
+    var analysisDownloadPdf = document.getElementById('analysis-download-pdf');
+    var analysisSaveBtn = document.getElementById('analysis-save-btn');
+    var currentAnalysis = '';
+    var currentResearchersAnalyzed = 0;
+
     var currentLattesId = '';
     var currentSummary = '';
     var currentProvider = '';
@@ -157,6 +176,8 @@
         resultCard.classList.remove('visible');
         if (aiSection) aiSection.style.display = 'none';
         if (summarySection) summarySection.style.display = 'none';
+        if (analysisPromptSection) analysisPromptSection.style.display = 'none';
+        if (analysisSection) analysisSection.style.display = 'none';
     }
 
     function formatDate(dateStr) {
@@ -263,6 +284,8 @@
 
                 summaryContent.innerHTML = renderMarkdown(data.summary);
                 summarySection.style.display = 'block';
+
+                if (analysisPromptSection) analysisPromptSection.style.display = 'block';
             })
             .catch(function () {
                 aiSpinner.classList.remove('visible');
@@ -305,6 +328,122 @@
             if (data.success && saveBtn) {
                 saveBtn.textContent = 'Salvo!';
                 setTimeout(function () { saveBtn.textContent = 'Ok'; }, 2000);
+            }
+        })
+        .catch(function () { });
+    }
+
+    // Analysis handlers
+    if (analysisYesBtn) {
+        analysisYesBtn.addEventListener('click', function () {
+            analysisPromptSection.style.display = 'none';
+            analysisSection.style.display = 'block';
+            analysisSpinner.classList.add('visible');
+            analysisLoadingMsg.style.display = 'block';
+            analysisError.classList.remove('visible');
+            analysisInfo.classList.remove('visible');
+            analysisResult.style.display = 'none';
+
+            fetch('/api/analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lattesId: currentLattesId,
+                    provider: currentProvider,
+                    apiKey: apiKeyInput.value,
+                    model: currentModel
+                })
+            })
+            .then(function (r) {
+                return r.json().then(function (data) {
+                    return { status: r.status, body: data };
+                });
+            })
+            .then(function (result) {
+                analysisSpinner.classList.remove('visible');
+                analysisLoadingMsg.style.display = 'none';
+
+                if (result.status === 409) {
+                    analysisInfo.textContent = result.body.error || 'Não há outros pesquisadores para analisar.';
+                    analysisInfo.classList.add('visible');
+                    return;
+                }
+
+                if (!result.body.success) {
+                    analysisError.textContent = result.body.error || 'Erro ao analisar relações';
+                    analysisError.classList.add('visible');
+                    return;
+                }
+
+                currentAnalysis = result.body.analysis;
+                currentResearchersAnalyzed = result.body.researchersAnalyzed || 0;
+
+                if (result.body.truncated) {
+                    analysisTruncationWarning.textContent = result.body.truncationWarning;
+                    analysisTruncationWarning.style.display = 'block';
+                } else {
+                    analysisTruncationWarning.style.display = 'none';
+                }
+
+                analysisContent.innerHTML = renderMarkdown(result.body.analysis);
+                analysisResult.style.display = 'block';
+            })
+            .catch(function () {
+                analysisSpinner.classList.remove('visible');
+                analysisLoadingMsg.style.display = 'none';
+                analysisError.textContent = 'Erro de conexão ao analisar relações';
+                analysisError.classList.add('visible');
+            });
+        });
+    }
+
+    if (analysisNoBtn) {
+        analysisNoBtn.addEventListener('click', function () {
+            analysisPromptSection.style.display = 'none';
+        });
+    }
+
+    if (analysisDownloadMd) {
+        analysisDownloadMd.addEventListener('click', function () {
+            window.open('/api/analysis/download/' + currentLattesId + '?format=md', '_blank');
+            saveAnalysis();
+        });
+    }
+    if (analysisDownloadDocx) {
+        analysisDownloadDocx.addEventListener('click', function () {
+            window.open('/api/analysis/download/' + currentLattesId + '?format=docx', '_blank');
+            saveAnalysis();
+        });
+    }
+    if (analysisDownloadPdf) {
+        analysisDownloadPdf.addEventListener('click', function () {
+            window.open('/api/analysis/download/' + currentLattesId + '?format=pdf', '_blank');
+            saveAnalysis();
+        });
+    }
+    if (analysisSaveBtn) {
+        analysisSaveBtn.addEventListener('click', function () {
+            saveAnalysis();
+        });
+    }
+
+    function saveAnalysis() {
+        fetch('/api/analysis/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                lattesId: currentLattesId,
+                analysis: currentAnalysis,
+                provider: currentProvider,
+                model: currentModel,
+                researchersAnalyzed: currentResearchersAnalyzed
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success && analysisSaveBtn) {
+                analysisSaveBtn.textContent = 'Salvo!';
+                setTimeout(function () { analysisSaveBtn.textContent = 'Ok'; }, 2000);
             }
         })
         .catch(function () { });

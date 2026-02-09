@@ -1,0 +1,187 @@
+openapi: "3.1.0"
+info:
+  title: smartLattes — Analysis Context API
+  version: "1.0.0"
+  description: API endpoints for the researcher relationship analysis feature
+
+paths:
+  /api/analysis:
+    post:
+      summary: Generate researcher relationship analysis
+      description: |
+        Analyzes the specified researcher's CV against all other researchers in the MongoDB database.
+        Uses the provided AI provider, model, and API key (reused from summary generation step).
+        Returns two lists: researchers with common interests and researchers with complementary interests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lattesId, provider, apiKey, model]
+              properties:
+                lattesId:
+                  type: string
+                  description: Lattes ID (numero-identificador) of the researcher to analyze
+                  example: "8334174268306003"
+                provider:
+                  type: string
+                  enum: [openai, anthropic, gemini]
+                  description: AI provider to use
+                apiKey:
+                  type: string
+                  description: API key for the selected provider (not stored)
+                model:
+                  type: string
+                  description: Model ID to use for generation
+                  example: "claude-sonnet-4-5-20250929"
+      responses:
+        "200":
+          description: Analysis generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  analysis:
+                    type: string
+                    description: Markdown-formatted analysis with two sections
+                  provider:
+                    type: string
+                  model:
+                    type: string
+                  researchersAnalyzed:
+                    type: integer
+                    description: Number of other researchers compared
+                  truncated:
+                    type: boolean
+                    description: Whether data was truncated to fit token limits
+                  truncationWarning:
+                    type: string
+                    description: Warning message if data was truncated
+        "400":
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Researcher CV not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Only one researcher in database (no others to compare)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI provider or MongoDB unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: AI provider timeout (120s)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/analysis/save:
+    post:
+      summary: Persist analysis to MongoDB
+      description: |
+        Stores the generated analysis in the `relacoes` collection.
+        Uses upsert — replaces existing analysis for the same lattesID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lattesId, analysis, provider, model, researchersAnalyzed]
+              properties:
+                lattesId:
+                  type: string
+                  example: "8334174268306003"
+                analysis:
+                  type: string
+                  description: Full Markdown text of the analysis
+                provider:
+                  type: string
+                  enum: [openai, anthropic, gemini]
+                model:
+                  type: string
+                researchersAnalyzed:
+                  type: integer
+      responses:
+        "200":
+          description: Analysis saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/analysis/download/{lattesId}:
+    get:
+      summary: Download analysis report
+      description: Download the stored analysis report in the specified format
+      parameters:
+        - name: lattesId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [md, docx, pdf]
+      responses:
+        "200":
+          description: File download
+          content:
+            text/markdown:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Analysis not found for this researcher
+        "501":
+          description: Format not yet implemented (docx, pdf)
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Human-readable error message in Portuguese

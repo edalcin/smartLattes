@@ -19,6 +19,9 @@ import (
 //go:embed resumoPrompt.md
 var resumoPrompt string
 
+//go:embed analisePrompt.md
+var analisePrompt string
+
 func main() {
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
@@ -62,6 +65,7 @@ func main() {
 	mux.HandleFunc("/upload", handler.PageHandler("upload.html"))
 	mux.HandleFunc("/explorer", handler.PageHandler("explorer.html"))
 	mux.HandleFunc("/resumo", handler.PageHandler("resumo.html"))
+	mux.HandleFunc("/analise", handler.PageHandler("analise.html"))
 	mux.Handle("/static/", http.StripPrefix("/static/", handler.StaticHandler()))
 
 	mux.Handle("/api/upload", &handler.UploadHandler{
@@ -81,6 +85,14 @@ func main() {
 	mux.Handle("/api/summary", summaryHandler)
 	mux.Handle("/api/summary/save", summaryHandler)
 	mux.Handle("/api/download/", &handler.DownloadHandler{Store: db})
+
+	analysisHandler := &handler.AnalysisHandler{
+		Store:  db,
+		Prompt: analisePrompt,
+	}
+	mux.Handle("/api/analysis", analysisHandler)
+	mux.Handle("/api/analysis/save", analysisHandler)
+	mux.Handle("/api/analysis/download/", &handler.AnalysisDownloadHandler{Store: db})
 
 	srv := &http.Server{
 		Addr:         ":" + port,

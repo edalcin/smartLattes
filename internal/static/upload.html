@@ -12,6 +12,7 @@
         <ul class="navbar-nav">
             <li><a href="/upload" class="active">Enviar CV</a></li>
             <li><a href="/resumo">Gerar Resumo</a></li>
+            <li><a href="/analise">Analisar Rela&ccedil;&otilde;es</a></li>
             <li><a href="/explorer">Explorar Dados</a></li>
         </ul>
     </nav>
@@ -121,6 +122,38 @@
                         <button type="button" class="btn btn-secondary" id="download-docx">Baixar .docx</button>
                         <button type="button" class="btn btn-secondary" id="download-pdf">Baixar .pdf</button>
                         <button type="button" class="btn btn-primary" id="save-btn">Ok</button>
+                    </div>
+                </div>
+
+                <!-- Analysis Section (shown after summary) -->
+                <div id="analysis-prompt-section" style="display:none;">
+                    <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--color-border);">
+                    <div class="analysis-prompt-card">
+                        <p style="font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem;">Deseja analisar rela&ccedil;&otilde;es com outros pesquisadores?</p>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="button" class="btn btn-success" id="analysis-yes-btn">Sim, analisar</button>
+                            <button type="button" class="btn btn-secondary" id="analysis-no-btn">N&atilde;o, obrigado</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="analysis-section" style="display:none;">
+                    <div class="spinner" id="analysis-spinner"></div>
+                    <p id="analysis-loading-message" class="loading-message" style="display:none;">Analisando rela&ccedil;&otilde;es entre pesquisadores...</p>
+
+                    <div id="analysis-error" class="message message-error"></div>
+                    <div id="analysis-info" class="message message-info"></div>
+
+                    <div id="analysis-result" style="display:none;">
+                        <div id="analysis-truncation-warning" class="message message-warning" style="display:none;"></div>
+                        <div id="analysis-content" class="summary-content"></div>
+
+                        <div class="download-actions">
+                            <button type="button" class="btn btn-secondary" id="analysis-download-md">Baixar .md</button>
+                            <button type="button" class="btn btn-secondary" id="analysis-download-docx">Baixar .docx</button>
+                            <button type="button" class="btn btn-secondary" id="analysis-download-pdf">Baixar .pdf</button>
+                            <button type="button" class="btn btn-primary" id="analysis-save-btn">Ok</button>
+                        </div>
                     </div>
                 </div>
             </div>

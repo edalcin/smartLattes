@@ -115,3 +115,108 @@ func maxArrayLen(refs []arrayRef) int {
 	}
 	return m
 }
+
+func estimateTokensAny(data interface{}) int {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return 0
+	}
+	return len(b) / 4
+}
+
+func deepCopyAny(src interface{}) interface{} {
+	b, err := json.Marshal(src)
+	if err != nil {
+		return src
+	}
+	var dst interface{}
+	if err := json.Unmarshal(b, &dst); err != nil {
+		return src
+	}
+	return dst
+}
+
+func removeFieldFromCV(cv map[string]interface{}, field string) {
+	inner, ok := cv["curriculo-vitae"]
+	if !ok {
+		return
+	}
+	cvMap, ok := inner.(map[string]interface{})
+	if !ok {
+		return
+	}
+	delete(cvMap, field)
+
+	dg, ok := cvMap["dados-gerais"]
+	if !ok {
+		return
+	}
+	dgMap, ok := dg.(map[string]interface{})
+	if !ok {
+		return
+	}
+	delete(dgMap, field)
+}
+
+func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[string]interface{}, maxTokens int) (string, bool) {
+	currentCopy := deepCopy(currentCV)
+	if currentCopy == nil {
+		currentCopy = currentCV
+	}
+
+	othersCopy := make([]interface{}, len(otherCVs))
+	for i, cv := range otherCVs {
+		othersCopy[i] = deepCopyAny(cv)
+	}
+
+	combined := map[string]interface{}{
+		"pesquisador_alvo":    currentCopy,
+		"outros_pesquisadores": othersCopy,
+	}
+
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), false
+	}
+
+	for i, cv := range othersCopy {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		removeFieldFromCV(cvMap, "producao-bibliografica")
+		othersCopy[i] = cvMap
+	}
+	combined["outros_pesquisadores"] = othersCopy
+
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	for i, cv := range othersCopy {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		removeFieldFromCV(cvMap, "atuacoes-profissionais")
+		othersCopy[i] = cvMap
+	}
+	combined["outros_pesquisadores"] = othersCopy
+
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	for n := len(othersCopy); n >= 0; n-- {
+		combined["outros_pesquisadores"] = othersCopy[:n]
+		if estimateTokensAny(combined) <= maxTokens {
+			b, _ := json.Marshal(combined)
+			return string(b), true
+		}
+	}
+
+	b, _ := json.Marshal(combined)
+	return string(b), true
+}

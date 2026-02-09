@@ -2,16 +2,17 @@
 
 **Feature**: `smartlattes`
 **Created**: 2026-02-07
-**Updated**: 2026-02-08
+**Updated**: 2026-02-09
 **Status**: Draft
 
 ## Visao Geral
 
-O smartLattes ingere curriculos exportados em XML da Plataforma Lattes (CNPq), armazena-os em MongoDB e, a partir desses dados, gera artefatos de inteligencia por meio de provedores de IA (contexto de Transformacao). A arquitetura segue o C4 Model com tres contextos:
+O smartLattes ingere curriculos exportados em XML da Plataforma Lattes (CNPq), armazena-os em MongoDB e, a partir desses dados, gera artefatos de inteligencia por meio de provedores de IA (contextos de Transformacao e Analise). A arquitetura segue o C4 Model com quatro contextos:
 
 1. **Aquisicao** - Upload e armazenamento de curriculos Lattes (implementado).
-2. **Transformacao** - Geracao de artefatos derivados usando IA (resumo do pesquisador, analises de relacao entre pesquisadores, perfil de pontos fortes).
-3. **Apresentacao** - Visualizacao e exploracao dos dados na base (futuro).
+2. **Transformacao** - Geracao de artefatos derivados usando IA (resumo do pesquisador).
+3. **Analise** - Identificacao de relacoes entre pesquisadores usando IA (redes de pesquisa, colaboracoes interdisciplinares).
+4. **Apresentacao** - Visualizacao e exploracao dos dados na base (futuro).
 
 ## Clarifications
 
@@ -33,6 +34,15 @@ O smartLattes ingere curriculos exportados em XML da Plataforma Lattes (CNPq), a
 - Q: HTTPS ou HTTP para proteger chave de API em transito? → A: Plain HTTP — rede interna confiavel, sem necessidade de TLS.
 - Q: Como buscar CV na pagina dedicada de resumo? → A: Campo de texto que busca por lattesID ou nome do pesquisador.
 - Q: O que fazer quando os dados do CV excedem o limite de tokens do modelo? → A: Truncar os dados para caber no limite do modelo e avisar o usuario que os resultados podem ser parciais.
+
+### Session 2026-02-09
+
+- O contexto de Analise e introduzido como novo contexto do C4 Model, separado do contexto de Transformacao.
+- A analise de relacoes identifica: (a) pesquisadores com interesses comuns e (b) pesquisadores com interesses complementares com sugestoes de projetos interdisciplinares.
+- O fluxo de analise ocorre apos a geracao do resumo, reutilizando provedor, modelo e chave de API ja fornecidos.
+- Os dados de relacao sao armazenados na colecao `relacoes` do MongoDB com `_id` = lattesID.
+- O prompt de analise fica em `analisePrompt.md` no repositorio, editavel sem alterar codigo.
+- O item "Analisar Relacoes" e adicionado ao menu principal de navegacao.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -75,10 +85,11 @@ The researcher accesses the smartLattes homepage which has a main navigation men
 
 **Acceptance Scenarios**:
 
-1. **Given** a user on the homepage, **When** they look at the main navigation, **Then** they see menu items for "Enviar CV" (acquisition), "Gerar Resumo" (transformation) and "Explorar Dados" (presentation).
+1. **Given** a user on the homepage, **When** they look at the main navigation, **Then** they see menu items for "Enviar CV" (acquisition), "Gerar Resumo" (transformation), "Analisar Relacoes" (analise) and "Explorar Dados" (presentation).
 2. **Given** a user on the homepage, **When** they click "Enviar CV", **Then** they are taken to the XML upload page.
 3. **Given** a user on the homepage, **When** they click "Gerar Resumo", **Then** they are taken to the dedicated summary generation page where they can search for a previously uploaded CV.
-4. **Given** a user on the homepage, **When** they click "Explorar Dados", **Then** they see a placeholder page indicating this feature is coming soon.
+4. **Given** a user on the homepage, **When** they click "Analisar Relacoes", **Then** they are taken to the analysis page (or see a placeholder if the feature is not yet implemented).
+5. **Given** a user on the homepage, **When** they click "Explorar Dados", **Then** they see a placeholder page indicating this feature is coming soon.
 
 ---
 
@@ -113,6 +124,38 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 
 ---
 
+### User Story 6 - Analisar Relacoes entre Pesquisadores via IA (Priority: P2)
+
+Apos o envio do arquivo .XML e a geracao do resumo pela inteligencia artificial, o sistema consulta o pesquisador se deseja realizar a pesquisa de relacionamento com outros pesquisadores na base de dados. Caso afirmativo, o sistema analisa os dados do pesquisador em conjunto com os dados de todos os outros pesquisadores armazenados no MongoDB, utilizando o provedor, modelo e chave de API ja fornecidos, e gera duas listas: pesquisadores com interesses comuns e pesquisadores com interesses complementares com sugestao de projetos interdisciplinares.
+
+**Why this priority**: Agrega valor significativo ao ecossistema do smartLattes ao identificar oportunidades de colaboracao cientifica que seriam dificeis de descobrir manualmente, mas depende do contexto de Transformacao (resumo) estar funcional.
+
+**Independent Test**: Pode ser testado com pelo menos dois CVs na base, selecionando um pesquisador, informando chave de API valida e verificando que as listas de relacoes sao coerentes com os perfis dos pesquisadores.
+
+**Acceptance Scenarios**:
+
+1. **Given** o resumo do pesquisador foi gerado com sucesso, **When** a tela de resumo e exibida, **Then** o sistema apresenta a pergunta "Deseja analisar relacoes com outros pesquisadores?" com opcoes "Sim" e "Nao".
+2. **Given** o pesquisador clicou "Sim", **When** o sistema inicia a analise, **Then** exibe indicador de progresso enquanto consulta os dados dos demais pesquisadores no MongoDB e envia ao provedor de IA junto com o prompt definido em `analisePrompt.md`.
+3. **Given** a analise foi concluida, **When** o resultado e apresentado, **Then** exibe duas listas: (a) pesquisadores com interesses comuns e (b) pesquisadores com interesses complementares com sugestao de projetos interdisciplinares.
+4. **Given** as listas de relacoes sao exibidas, **When** o pesquisador deseja salva-las, **Then** pode fazer download em formato .md, .docx ou .pdf.
+5. **Given** o pesquisador fez download ou clicou em "Ok", **Then** os dados de relacao sao armazenados na colecao `relacoes` do MongoDB, usando o lattesID do pesquisador como chave primaria (`_id`).
+6. **Given** o pesquisador clicou "Nao", **Then** o sistema encerra o fluxo sem realizar a analise.
+7. **Given** existe apenas um pesquisador na base de dados, **When** o pesquisador solicita a analise, **Then** o sistema exibe mensagem informando que nao ha outros pesquisadores na base para comparacao.
+
+---
+
+### User Story 7 - Tratamento de Erros na Analise de Relacoes (Priority: P3)
+
+O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo mensagens claras ao pesquisador.
+
+**Acceptance Scenarios**:
+
+1. **Given** o provedor de IA retorna erro durante a analise, **When** a geracao falha, **Then** o sistema exibe mensagem de erro e permite que o pesquisador tente novamente.
+2. **Given** o volume de dados dos pesquisadores excede o limite de contexto do modelo, **When** a analise e solicitada, **Then** o sistema trunca os dados para caber no limite e avisa o usuario que os resultados podem ser parciais.
+3. **Given** o MongoDB esta indisponivel durante a consulta dos demais pesquisadores, **When** a analise e solicitada, **Then** o sistema exibe mensagem clara de erro.
+
+---
+
 ### Edge Cases
 
 - **File exceeds 10MB**: System rejects the upload immediately with a clear error message stating the file size limit.
@@ -125,6 +168,10 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 - **Timeout na geracao de resumo**: Se o provedor de IA demorar mais que 120 segundos para responder, o sistema cancela a requisicao e exibe mensagem de timeout.
 - **Prompt editavel**: O prompt de geracao do resumo fica em `resumoPrompt.md` na raiz do repositorio, permitindo ajustes sem alterar codigo.
 - **CV excede limite de tokens**: O sistema trunca os dados do CV para caber no contexto do modelo selecionado e avisa o usuario que os resultados podem ser parciais.
+- **Base com apenas um pesquisador**: Se nao houver outros pesquisadores na base alem do que solicitou a analise, o sistema informa que nao ha dados suficientes para comparacao.
+- **Prompt de analise editavel**: O prompt de analise de relacoes fica em `analisePrompt.md` na raiz do repositorio, permitindo ajustes sem alterar codigo.
+- **Dados de relacao ja existentes**: Se o pesquisador solicitar nova analise e ja existirem dados de relacao armazenados, o sistema substitui (upsert) os dados anteriores com a nova analise.
+- **Volume de dados excede contexto do modelo**: Quando os dados combinados de todos os pesquisadores excedem o limite de tokens, o sistema trunca e avisa o usuario.
 
 ## Requirements *(mandatory)*
 
@@ -136,7 +183,7 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 - **FR-004**: System MUST handle the upsert case: if a CV with the same numero-identificador already exists, it MUST be replaced with the new upload
 - **FR-005**: System MUST validate that the uploaded file is a valid Lattes XML before attempting to store it (check for CURRICULO-VITAE root element and NUMERO-IDENTIFICADOR attribute)
 - **FR-006**: System MUST display appropriate success or error messages to the user after upload
-- **FR-007**: System MUST provide a main navigation menu with links to "Enviar CV" (upload), "Gerar Resumo" (transformation) and "Explorar Dados" (presentation placeholder)
+- **FR-007**: System MUST provide a main navigation menu with links to "Enviar CV" (upload), "Gerar Resumo" (transformation), "Analisar Relacoes" (analise) and "Explorar Dados" (presentation placeholder)
 - **FR-008**: System MUST handle XML files encoded in ISO-8859-1 (the standard encoding used by Plataforma Lattes exports)
 - **FR-009**: System MUST run as a single Docker container, published to ghcr.io/edalcin/
 - **FR-010**: System MUST NOT require authentication — it operates as an open-access application on a trusted network
@@ -159,11 +206,25 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 - **FR-109**: O sistema DEVE exibir mensagens de erro claras para: chave de API invalida, provedor indisponivel, timeout (120s) e demais falhas de integracao.
 - **FR-110**: Quando os dados do CV excederem o limite de contexto do modelo selecionado, o sistema DEVE truncar os dados para caber no limite e exibir aviso ao usuario informando que os resultados podem ser parciais.
 
+### Functional Requirements - Analise
+
+- **FR-200**: Apos a geracao do resumo do pesquisador, o sistema DEVE apresentar ao usuario a opcao de analisar relacoes com outros pesquisadores na base de dados, com opcoes "Sim" e "Nao".
+- **FR-201**: O sistema DEVE consultar os dados de todos os pesquisadores armazenados no MongoDB e envia-los ao provedor de IA, junto com os dados do pesquisador atual e o prompt definido em `analisePrompt.md`, para identificacao de relacoes.
+- **FR-202**: O sistema DEVE gerar duas listas de relacoes: (a) pesquisadores com interesses comuns, favorecendo a formacao de grupos de pesquisa, e (b) pesquisadores com interesses complementares, com sugestao de projetos interdisciplinares que combinem habilidades distintas para abordar problemas complexos.
+- **FR-203**: O sistema DEVE apresentar as listas de relacoes ao usuario com opcoes de download em .md, .docx e .pdf.
+- **FR-204**: O sistema DEVE armazenar os dados de relacao na colecao `relacoes` do MongoDB, usando o lattesID do pesquisador como chave primaria (`_id`). Cada registro contem as relacoes identificadas (interesses comuns e complementares) e metadados (provedor, modelo, data de geracao).
+- **FR-205**: O prompt de analise de relacoes DEVE ser lido do arquivo `analisePrompt.md` na raiz do repositorio, permitindo edicao sem alterar codigo.
+- **FR-206**: Quando houver apenas um pesquisador na base de dados, o sistema DEVE informar que nao ha dados suficientes para realizar a analise de relacoes.
+- **FR-207**: O sistema DEVE reutilizar o provedor, modelo e chave de API ja fornecidos pelo usuario durante a geracao do resumo, sem solicita-los novamente.
+- **FR-208**: Quando os dados combinados dos pesquisadores excederem o limite de contexto do modelo selecionado, o sistema DEVE truncar os dados para caber no limite e exibir aviso ao usuario informando que os resultados podem ser parciais.
+- **FR-209**: O sistema DEVE exibir indicador de progresso durante a geracao da analise de relacoes.
+
 ### Key Entities
 
 - **Curriculo (CV)**: Representa o curriculo Lattes de um pesquisador. Identificado por `numero-identificador` (chave primaria). De DADOS-GERAIS, armazena apenas: nome-completo, orcid-id, nome-em-citacoes-bibliograficas, formacao-academica-titulacao, atuacoes-profissionais, areas-de-atuacao. Demais secoes (producao-bibliografica, producao-tecnica, outra-producao, dados-complementares) sao preservadas integralmente. Todos os atributos em caixa baixa.
 - **Upload Event**: Represents a single file upload action. Contains the original filename, upload timestamp, processing status, and the extracted numero-identificador.
 - **Resumo do Pesquisador**: Artefato gerado por IA a partir dos dados do curriculo. Armazenado na colecao `resumos` do MongoDB com `_id` = lattesID. Contem: analise de pontos fortes, areas de atuacao estruturadas, potencial cientifico, co-autores frequentes e producao quantificada por area. Inclui metadados: provedor e modelo de IA utilizados, data de geracao.
+- **Relacoes do Pesquisador**: Artefato gerado por IA a partir da analise comparativa entre o pesquisador e todos os demais na base. Armazenado na colecao `relacoes` do MongoDB com `_id` = lattesID. Contem duas listas: (a) pesquisadores com interesses comuns, incluindo areas e producao em comum, e (b) pesquisadores com interesses complementares, incluindo sugestoes de projetos interdisciplinares. Inclui metadados: provedor e modelo de IA utilizados, data de geracao, quantidade de pesquisadores analisados.
 
 ## Constraints & Assumptions
 
@@ -172,12 +233,14 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 - **C-003**: The Docker image MUST be published to `ghcr.io/edalcin/`
 - **C-004**: The Docker image should be as small as possible
 - **C-005**: The technology stack should be simple and modern, enabling a clean web interface
-- **C-006**: The application follows the C4 Model architecture with three contexts: acquisition (upload), transformation (AI-powered analysis), and presentation (future data visualization)
+- **C-006**: The application follows the C4 Model architecture with four contexts: acquisition (upload), transformation (AI-powered summary), analysis (AI-powered relationship identification), and presentation (future data visualization)
 - **C-007**: An example Lattes XML file is available at `/docs/8334174268306003.xml` for reference and testing
 - **C-008**: As chaves de API dos provedores de IA sao fornecidas pelo usuario a cada uso e nao sao persistidas
 - **C-009**: O prompt de geracao e mantido em `resumoPrompt.md` no repositorio, versionado junto com o codigo
 - **C-010**: A comunicacao com provedores de IA e feita server-side (backend Go) para proteger a chave de API do usuario
 - **C-011**: A aplicacao serve via HTTP puro (sem TLS). A chave de API transita em texto claro na rede interna confiavel. Se necessario, um reverse proxy externo pode ser adicionado para TLS.
+- **C-012**: O prompt de analise de relacoes e mantido em `analisePrompt.md` no repositorio, versionado junto com o codigo
+- **C-013**: A analise de relacoes reutiliza o provedor, modelo e chave de API ja informados pelo usuario na etapa de geracao de resumo
 
 ## Success Criteria *(mandatory)*
 
@@ -195,3 +258,8 @@ O sistema trata adequadamente erros na integracao com provedores de IA, exibindo
 - **SC-010**: O resumo e armazenado corretamente na colecao `resumos` do MongoDB, associado ao lattesID
 - **SC-011**: O pesquisador consegue fazer download do resumo nos tres formatos (.md, .docx, .pdf)
 - **SC-012**: Nenhum dado pessoal ou sensivel (CPF, RG, endereco, etc.) e armazenado no banco de dados
+- **SC-013**: O pesquisador consegue gerar a analise de relacoes apos a geracao do resumo, reutilizando provedor, modelo e chave de API ja fornecidos
+- **SC-014**: A analise gera corretamente duas listas: pesquisadores com interesses comuns e pesquisadores com interesses complementares com sugestoes de projetos
+- **SC-015**: Os dados de relacao sao armazenados corretamente na colecao `relacoes` do MongoDB, associados ao lattesID
+- **SC-016**: O pesquisador consegue fazer download da analise de relacoes nos tres formatos (.md, .docx, .pdf)
+- **SC-017**: Quando ha apenas um pesquisador na base, o sistema informa adequadamente que nao ha dados para comparacao

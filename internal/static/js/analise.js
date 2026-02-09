@@ -1,5 +1,4 @@
 (function () {
-    // Elements
     var searchInput = document.getElementById('search-input');
     var searchResults = document.getElementById('search-results');
     var selectedCv = document.getElementById('selected-cv');
@@ -22,32 +21,13 @@
     var downloadPdf = document.getElementById('download-pdf');
     var saveBtn = document.getElementById('save-btn');
 
-    // Analysis elements
-    var analysisPromptSection = document.getElementById('analysis-prompt-section');
-    var analysisYesBtn = document.getElementById('analysis-yes-btn');
-    var analysisNoBtn = document.getElementById('analysis-no-btn');
-    var analysisSection = document.getElementById('analysis-section');
-    var analysisSpinner = document.getElementById('analysis-spinner');
-    var analysisLoadingMsg = document.getElementById('analysis-loading-message');
-    var analysisError = document.getElementById('analysis-error');
-    var analysisInfo = document.getElementById('analysis-info');
-    var analysisResult = document.getElementById('analysis-result');
-    var analysisTruncationWarning = document.getElementById('analysis-truncation-warning');
-    var analysisContent = document.getElementById('analysis-content');
-    var analysisDownloadMd = document.getElementById('analysis-download-md');
-    var analysisDownloadDocx = document.getElementById('analysis-download-docx');
-    var analysisDownloadPdf = document.getElementById('analysis-download-pdf');
-    var analysisSaveBtn = document.getElementById('analysis-save-btn');
-    var currentAnalysis = '';
-    var currentResearchersAnalyzed = 0;
-
     var currentLattesId = '';
-    var currentSummary = '';
+    var currentAnalysis = '';
     var currentProvider = '';
     var currentModel = '';
+    var currentResearchersAnalyzed = 0;
     var searchTimeout = null;
 
-    // Search with debounce
     searchInput.addEventListener('input', function () {
         var query = searchInput.value.trim();
         if (searchTimeout) clearTimeout(searchTimeout);
@@ -75,7 +55,6 @@
                     }
                     searchResults.innerHTML = html;
 
-                    // Add click handlers
                     var cards = searchResults.querySelectorAll('.search-result-card');
                     for (var j = 0; j < cards.length; j++) {
                         cards[j].addEventListener('click', function () {
@@ -98,11 +77,8 @@
         searchResults.innerHTML = '';
         hideError();
         summarySection.style.display = 'none';
-        if (analysisPromptSection) analysisPromptSection.style.display = 'none';
-        if (analysisSection) analysisSection.style.display = 'none';
     }
 
-    // Enable/disable load models button
     providerSelect.addEventListener('change', checkLoadModels);
     apiKeyInput.addEventListener('input', checkLoadModels);
 
@@ -110,7 +86,6 @@
         loadModelsBtn.disabled = !(providerSelect.value && apiKeyInput.value.length >= 10);
     }
 
-    // Load models
     loadModelsBtn.addEventListener('click', function () {
         hideError();
         loadModelsBtn.disabled = true;
@@ -139,7 +114,6 @@
             }
             var data = result.body;
 
-            // Populate model select
             modelSelect.innerHTML = '<option value="">Selecione o modelo...</option>';
             for (var i = 0; i < data.models.length; i++) {
                 var opt = document.createElement('option');
@@ -156,12 +130,10 @@
         });
     });
 
-    // Enable generate button when model selected
     modelSelect.addEventListener('change', function () {
         generateBtn.disabled = !modelSelect.value;
     });
 
-    // Generate summary
     generateBtn.addEventListener('click', function () {
         hideError();
         generateBtn.disabled = true;
@@ -172,7 +144,7 @@
         currentProvider = providerSelect.value;
         currentModel = modelSelect.value;
 
-        fetch('/api/summary', {
+        fetch('/api/analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -193,14 +165,14 @@
             generateBtn.disabled = false;
 
             if (!result.body.success) {
-                showError(result.body.error || 'Erro ao gerar resumo');
+                showError(result.body.error || 'Erro ao analisar relações');
                 return;
             }
             var data = result.body;
 
-            currentSummary = data.summary;
+            currentAnalysis = data.analysis;
+            currentResearchersAnalyzed = data.researchersAnalyzed || 0;
 
-            // Show truncation warning if needed
             if (data.truncated) {
                 truncationWarning.textContent = data.truncationWarning;
                 truncationWarning.style.display = 'block';
@@ -208,153 +180,33 @@
                 truncationWarning.style.display = 'none';
             }
 
-            // Render summary (basic markdown to HTML)
-            summaryContent.innerHTML = renderMarkdown(data.summary);
+            summaryContent.innerHTML = renderMarkdown(data.analysis);
             summarySection.style.display = 'block';
-
-            if (analysisPromptSection) analysisPromptSection.style.display = 'block';
         })
         .catch(function () {
             spinner.classList.remove('visible');
             loadingMessage.style.display = 'none';
             generateBtn.disabled = false;
-            showError('Erro de conexão ao gerar resumo');
+            showError('Erro de conexão ao analisar relações');
         });
     });
 
-    // Download buttons
     downloadMd.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=md', '_blank');
-        saveSummary();
+        window.open('/api/analysis/download/' + currentLattesId + '?format=md', '_blank');
+        saveAnalysis();
     });
     downloadDocx.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=docx', '_blank');
-        saveSummary();
+        window.open('/api/analysis/download/' + currentLattesId + '?format=docx', '_blank');
+        saveAnalysis();
     });
     downloadPdf.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=pdf', '_blank');
-        saveSummary();
+        window.open('/api/analysis/download/' + currentLattesId + '?format=pdf', '_blank');
+        saveAnalysis();
     });
 
-    // Save button
     saveBtn.addEventListener('click', function () {
-        saveSummary();
+        saveAnalysis();
     });
-
-    function saveSummary() {
-        fetch('/api/summary/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                lattesId: currentLattesId,
-                summary: currentSummary,
-                provider: currentProvider,
-                model: currentModel
-            })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.success) {
-                saveBtn.textContent = 'Salvo!';
-                setTimeout(function () { saveBtn.textContent = 'Ok'; }, 2000);
-            }
-        })
-        .catch(function () { /* silently fail save */ });
-    }
-
-    // Analysis handlers
-    if (analysisYesBtn) {
-        analysisYesBtn.addEventListener('click', function () {
-            analysisPromptSection.style.display = 'none';
-            analysisSection.style.display = 'block';
-            analysisSpinner.classList.add('visible');
-            analysisLoadingMsg.style.display = 'block';
-            analysisError.classList.remove('visible');
-            analysisInfo.classList.remove('visible');
-            analysisResult.style.display = 'none';
-
-            fetch('/api/analysis', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    lattesId: currentLattesId,
-                    provider: currentProvider,
-                    apiKey: apiKeyInput.value,
-                    model: currentModel
-                })
-            })
-            .then(function (r) {
-                return r.json().then(function (data) {
-                    return { status: r.status, body: data };
-                });
-            })
-            .then(function (result) {
-                analysisSpinner.classList.remove('visible');
-                analysisLoadingMsg.style.display = 'none';
-
-                if (result.status === 409) {
-                    analysisInfo.textContent = result.body.error || 'Não há outros pesquisadores para analisar.';
-                    analysisInfo.classList.add('visible');
-                    return;
-                }
-
-                if (!result.body.success) {
-                    analysisError.textContent = result.body.error || 'Erro ao analisar relações';
-                    analysisError.classList.add('visible');
-                    return;
-                }
-
-                currentAnalysis = result.body.analysis;
-                currentResearchersAnalyzed = result.body.researchersAnalyzed || 0;
-
-                if (result.body.truncated) {
-                    analysisTruncationWarning.textContent = result.body.truncationWarning;
-                    analysisTruncationWarning.style.display = 'block';
-                } else {
-                    analysisTruncationWarning.style.display = 'none';
-                }
-
-                analysisContent.innerHTML = renderMarkdown(result.body.analysis);
-                analysisResult.style.display = 'block';
-            })
-            .catch(function () {
-                analysisSpinner.classList.remove('visible');
-                analysisLoadingMsg.style.display = 'none';
-                analysisError.textContent = 'Erro de conexão ao analisar relações';
-                analysisError.classList.add('visible');
-            });
-        });
-    }
-
-    if (analysisNoBtn) {
-        analysisNoBtn.addEventListener('click', function () {
-            analysisPromptSection.style.display = 'none';
-        });
-    }
-
-    if (analysisDownloadMd) {
-        analysisDownloadMd.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=md', '_blank');
-            saveAnalysis();
-        });
-    }
-    if (analysisDownloadDocx) {
-        analysisDownloadDocx.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=docx', '_blank');
-            saveAnalysis();
-        });
-    }
-    if (analysisDownloadPdf) {
-        analysisDownloadPdf.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=pdf', '_blank');
-            saveAnalysis();
-        });
-    }
-    if (analysisSaveBtn) {
-        analysisSaveBtn.addEventListener('click', function () {
-            saveAnalysis();
-        });
-    }
 
     function saveAnalysis() {
         fetch('/api/analysis/save', {
@@ -370,15 +222,14 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            if (data.success && analysisSaveBtn) {
-                analysisSaveBtn.textContent = 'Salvo!';
-                setTimeout(function () { analysisSaveBtn.textContent = 'Ok'; }, 2000);
+            if (data.success) {
+                saveBtn.textContent = 'Salvo!';
+                setTimeout(function () { saveBtn.textContent = 'Ok'; }, 2000);
             }
         })
-        .catch(function () { });
+        .catch(function () { /* silently fail save */ });
     }
 
-    // Helpers
     function showError(message) {
         errorMsg.textContent = message;
         errorMsg.classList.add('visible');
@@ -395,22 +246,18 @@
     }
 
     function renderMarkdown(md) {
-        // Basic markdown rendering
         var html = md
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        // Headers
         html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
         html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
 
-        // Bold and italic
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-        // Tables (basic support)
         html = html.replace(/^\|(.+)\|$/gm, function (match, content) {
             var cells = content.split('|').map(function (c) { return c.trim(); });
             return '<tr>' + cells.map(function (c) {
@@ -418,19 +265,13 @@
                 return '<td>' + c + '</td>';
             }).join('') + '</tr>';
         });
-        // Wrap consecutive <tr> in <table>
         html = html.replace(/((?:<tr>.*?<\/tr>\n?)+)/g, '<table class="summary-table">$1</table>');
-        // Remove separator rows
         html = html.replace(/<tr><\/tr>/g, '');
 
-        // Lists
         html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
         html = html.replace(/((?:<li>.*?<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-        // Paragraphs (lines not already wrapped)
         html = html.replace(/^(?!<[hultd])(.+)$/gm, '<p>$1</p>');
-
-        // Clean up empty paragraphs
         html = html.replace(/<p>\s*<\/p>/g, '');
 
         return html;
