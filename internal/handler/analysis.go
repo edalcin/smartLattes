@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/edalcin/smartlattes/internal/ai"
 	"github.com/edalcin/smartlattes/internal/store"
@@ -91,7 +92,8 @@ func (h *AnalysisHandler) handleGenerate(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if errors.Is(err, ai.ErrRateLimited) {
-			writeJSON(w, 429, map[string]any{"success": false, "error": "Limite de requisições atingido. Aguarde e tente novamente."})
+			detail := strings.TrimPrefix(err.Error(), ai.ErrRateLimited.Error()+": ")
+			writeJSON(w, 429, map[string]any{"success": false, "error": "Limite de requisições atingido: " + detail})
 			return
 		}
 		if errors.Is(err, ai.ErrProviderUnavailable) {

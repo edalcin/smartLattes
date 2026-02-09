@@ -30,7 +30,8 @@ func (p *OpenAIProvider) ListModels(ctx context.Context, apiKey string) ([]Model
 		return nil, ErrInvalidKey
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, ErrRateLimited
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%w: %s", ErrRateLimited, extractAPIError(respBody, "OpenAI"))
 	}
 	if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf("%w: status %d", ErrProviderUnavailable, resp.StatusCode)
@@ -99,7 +100,8 @@ func (p *OpenAIProvider) Generate(ctx context.Context, req GenerateRequest) (str
 		return "", ErrInvalidKey
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", ErrRateLimited
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("%w: %s", ErrRateLimited, extractAPIError(respBody, "OpenAI"))
 	}
 	if resp.StatusCode >= 500 {
 		return "", fmt.Errorf("%w: status %d", ErrProviderUnavailable, resp.StatusCode)
