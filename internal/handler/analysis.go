@@ -67,7 +67,7 @@ func (h *AnalysisHandler) handleGenerate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userData, wasTruncated := ai.TruncateAnalysisData(cvData, otherCVs, 100000)
+	userData, wasTruncated := ai.TruncateAnalysisData(cvData, otherCVs, 20000)
 
 	provider, err := ai.NewProvider(req.Provider)
 	if err != nil {

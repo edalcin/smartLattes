@@ -56,7 +56,7 @@ func (h *SummaryHandler) handleGenerate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	truncatedData, wasTruncated := ai.TruncateCV(cvData, 100000)
+	truncatedData, wasTruncated := ai.TruncateCV(cvData, 20000)
 	userData := string(cvJSON)
 	if wasTruncated {
 		truncatedJSON, _ := json.Marshal(truncatedData)
