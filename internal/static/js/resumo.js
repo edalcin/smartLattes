@@ -446,9 +446,15 @@
         html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
 
+        // Horizontal rule
+        html = html.replace(/^---$/gm, '<hr>');
+
         // Bold and italic
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // Links
+        html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$2</a>');
 
         // Tables (basic support)
         html = html.replace(/^\|(.+)\|$/gm, function (match, content) {

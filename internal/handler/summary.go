@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -98,6 +99,9 @@ func (h *SummaryHandler) handleGenerate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	header := buildSummaryHeader(cvData, req.LattesID, req.Provider, req.Model)
+	summary = header + summary
+
 	response := map[string]any{
 		"success":  true,
 		"summary":  summary,
@@ -129,4 +133,32 @@ func (h *SummaryHandler) handleSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "Resumo salvo com sucesso"})
+}
+
+func buildSummaryHeader(cvData map[string]any, lattesID, provider, model string) string {
+	name := "Pesquisador"
+	lastUpdate := ""
+
+	if cv, ok := cvData["curriculo-vitae"].(map[string]any); ok {
+		if dg, ok := cv["dados-gerais"].(map[string]any); ok {
+			if n, ok := dg["nome-completo"].(string); ok && n != "" {
+				name = n
+			}
+		}
+		if dt, ok := cv["data-atualizacao"].(string); ok && len(dt) == 8 {
+			lastUpdate = dt[0:2] + "/" + dt[2:4] + "/" + dt[4:8]
+		}
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# %s\n\n", name))
+	sb.WriteString(fmt.Sprintf("**Acesse o Lattes em:** [http://lattes.cnpq.br/%s](http://lattes.cnpq.br/%s)\n\n", lattesID, lattesID))
+	sb.WriteString(fmt.Sprintf("**ID Lattes:** %s\n\n", lattesID))
+	if lastUpdate != "" {
+		sb.WriteString(fmt.Sprintf("**Última Atualização:** %s\n\n", lastUpdate))
+	}
+	sb.WriteString(fmt.Sprintf("**Gerado por:** %s / %s\n\n", provider, model))
+	sb.WriteString("---\n\n")
+
+	return sb.String()
 }

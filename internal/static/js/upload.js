@@ -510,8 +510,12 @@
         html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
         html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^---$/gm, '<hr>');
+
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$2</a>');
 
         html = html.replace(/^\|(.+)\|$/gm, function (match, content) {
             var cells = content.split('|').map(function (c) { return c.trim(); });
