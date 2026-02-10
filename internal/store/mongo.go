@@ -102,22 +102,26 @@ func (m *MongoDB) SearchCVs(ctx context.Context, query string) ([]CVSummary, err
 	}
 	defer cursor.Close(ctx)
 
+	type searchDoc struct {
+		ID string `bson:"_id"`
+		CV struct {
+			DadosGerais struct {
+				NomeCompleto string `bson:"nome-completo"`
+			} `bson:"dados-gerais"`
+		} `bson:"curriculo-vitae"`
+	}
+
 	var results []CVSummary
 	for cursor.Next(ctx) {
-		var doc bson.M
+		var doc searchDoc
 		if err := cursor.Decode(&doc); err != nil {
 			return nil, err
 		}
 
-		summary := CVSummary{LattesID: fmt.Sprintf("%v", doc["_id"])}
-		if cv, ok := doc["curriculo-vitae"].(bson.M); ok {
-			if dg, ok := cv["dados-gerais"].(bson.M); ok {
-				if name, ok := dg["nome-completo"].(string); ok {
-					summary.Name = name
-				}
-			}
-		}
-		results = append(results, summary)
+		results = append(results, CVSummary{
+			LattesID: doc.ID,
+			Name:     doc.CV.DadosGerais.NomeCompleto,
+		})
 	}
 
 	if err := cursor.Err(); err != nil {

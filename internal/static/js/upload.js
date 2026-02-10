@@ -23,6 +23,8 @@
     var truncationWarning = document.getElementById('truncation-warning');
     var summaryContent = document.getElementById('summary-content');
     var downloadMd = document.getElementById('download-md');
+    var downloadDocx = document.getElementById('download-docx');
+    var downloadPdf = document.getElementById('download-pdf');
     var saveBtn = document.getElementById('save-btn');
 
     // Analysis elements
@@ -38,6 +40,8 @@
     var analysisTruncationWarning = document.getElementById('analysis-truncation-warning');
     var analysisContent = document.getElementById('analysis-content');
     var analysisDownloadMd = document.getElementById('analysis-download-md');
+    var analysisDownloadDocx = document.getElementById('analysis-download-docx');
+    var analysisDownloadPdf = document.getElementById('analysis-download-pdf');
     var analysisSaveBtn = document.getElementById('analysis-save-btn');
     var currentAnalysis = '';
     var currentResearchersAnalyzed = 0;
@@ -295,6 +299,14 @@
             downloadBlob(currentSummary, 'resumo-' + currentLattesId + '.md', 'text/markdown');
             saveSummary();
         });
+        downloadDocx.addEventListener('click', function () {
+            downloadAsDoc(currentSummary, 'resumo-' + currentLattesId + '.doc');
+            saveSummary();
+        });
+        downloadPdf.addEventListener('click', function () {
+            downloadAsPdf(currentSummary);
+            saveSummary();
+        });
         saveBtn.addEventListener('click', function () {
             saveSummary();
         });
@@ -397,6 +409,18 @@
             saveAnalysis();
         });
     }
+    if (analysisDownloadDocx) {
+        analysisDownloadDocx.addEventListener('click', function () {
+            downloadAsDoc(currentAnalysis, 'analise-' + currentLattesId + '.doc');
+            saveAnalysis();
+        });
+    }
+    if (analysisDownloadPdf) {
+        analysisDownloadPdf.addEventListener('click', function () {
+            downloadAsPdf(currentAnalysis);
+            saveAnalysis();
+        });
+    }
     if (analysisSaveBtn) {
         analysisSaveBtn.addEventListener('click', function () {
             saveAnalysis();
@@ -448,6 +472,33 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    function markdownToHtml(md) {
+        return '<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6}h1,h2,h3{color:#1e3a5f}table{border-collapse:collapse;width:100%;margin:1rem 0}td,th{border:1px solid #ddd;padding:8px;text-align:left}ul{padding-left:1.5rem}</style></head><body>' +
+            renderMarkdown(md) +
+            '</body></html>';
+    }
+
+    function downloadAsDoc(content, filename) {
+        var html = markdownToHtml(content);
+        var blob = new Blob([html], { type: 'application/msword; charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function downloadAsPdf(content) {
+        var html = markdownToHtml(content);
+        var w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+        w.onload = function () { w.print(); };
     }
 
     function renderMarkdown(md) {
