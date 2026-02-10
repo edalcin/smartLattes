@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Rela&ccedil;&otilde;es - smartLattes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">smart<span>Lattes</span></a>
+        <ul class="navbar-nav">
+            <li><a href="/upload">Enviar CV</a></li>
+            <li><a href="/resumo">Gerar Resumo</a></li>
+            <li><a href="/visualizar-resumo">Visualizar Resumo</a></li>
+            <li><a href="/analise">Analisar Rela&ccedil;&otilde;es</a></li>
+            <li><a href="/visualizar-relacoes" class="active">Visualizar Rela&ccedil;&otilde;es</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="card">
+            <h2>Visualizar Rela&ccedil;&otilde;es</h2>
+            <p>Busque um pesquisador para visualizar a an&aacute;lise de rela&ccedil;&otilde;es j&aacute; gerada.</p>
+
+            <div class="form-group">
+                <label for="search-input">Buscar por nome ou Lattes ID</label>
+                <input type="text" id="search-input" placeholder="Digite pelo menos 3 caracteres..." class="form-control">
+            </div>
+            <div id="search-results" class="search-results"></div>
+
+            <div id="selected-cv" style="display:none;">
+                <div class="selected-cv-info">
+                    <strong id="selected-name"></strong>
+                    <span id="selected-lattes-id" class="search-result-id"></span>
+                </div>
+            </div>
+
+            <div class="spinner" id="spinner"></div>
+            <div id="error-message" class="message message-error"></div>
+            <div id="info-message" class="message message-info"></div>
+
+            <div id="analysis-section" style="display:none;">
+                <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--color-border);">
+                <div id="metadata" class="metadata-info"></div>
+                <div id="analysis-content" class="summary-content"></div>
+
+                <div class="download-actions">
+                    <button type="button" class="btn btn-secondary" id="download-md">Baixar .md</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/visualizar-relacoes.js"></script>
+</body>
+</html>

@@ -63,9 +63,10 @@ func main() {
 
 	mux.HandleFunc("/", handler.PageHandler("index.html"))
 	mux.HandleFunc("/upload", handler.PageHandler("upload.html"))
-	mux.HandleFunc("/explorer", handler.PageHandler("explorer.html"))
 	mux.HandleFunc("/resumo", handler.PageHandler("resumo.html"))
+	mux.HandleFunc("/visualizar-resumo", handler.PageHandler("visualizar-resumo.html"))
 	mux.HandleFunc("/analise", handler.PageHandler("analise.html"))
+	mux.HandleFunc("/visualizar-relacoes", handler.PageHandler("visualizar-relacoes.html"))
 	mux.Handle("/static/", http.StripPrefix("/static/", handler.StaticHandler()))
 
 	mux.Handle("/api/upload", &handler.UploadHandler{
@@ -93,6 +94,8 @@ func main() {
 	mux.Handle("/api/analysis", analysisHandler)
 	mux.Handle("/api/analysis/save", analysisHandler)
 	mux.Handle("/api/analysis/download/", &handler.AnalysisDownloadHandler{Store: db})
+	mux.Handle("/api/summary/view/", &handler.SummaryViewHandler{Store: db})
+	mux.Handle("/api/analysis/view/", &handler.AnalysisViewHandler{Store: db})
 
 	srv := &http.Server{
 		Addr:         ":" + port,
