@@ -9,6 +9,7 @@ import (
 
 	"github.com/edalcin/smartlattes/internal/ai"
 	"github.com/edalcin/smartlattes/internal/store"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type SummaryHandler struct {
@@ -139,13 +140,12 @@ func buildSummaryHeader(cvData map[string]any, lattesID, provider, model string)
 	name := "Pesquisador"
 	lastUpdate := ""
 
-	if cv, ok := cvData["curriculo-vitae"].(map[string]any); ok {
-		if dg, ok := cv["dados-gerais"].(map[string]any); ok {
-			if n, ok := dg["nome-completo"].(string); ok && n != "" {
-				name = n
-			}
+	cv := bsonGet(cvData, "curriculo-vitae")
+	if cv != nil {
+		if n, ok := bsonGetString(cv, "dados-gerais", "nome-completo"); ok && n != "" {
+			name = n
 		}
-		if dt, ok := cv["data-atualizacao"].(string); ok && len(dt) == 8 {
+		if dt, ok := bsonGetStringDirect(cv, "data-atualizacao"); ok && len(dt) == 8 {
 			lastUpdate = dt[0:2] + "/" + dt[2:4] + "/" + dt[4:8]
 		}
 	}
@@ -161,4 +161,45 @@ func buildSummaryHeader(cvData map[string]any, lattesID, provider, model string)
 	sb.WriteString("---\n\n")
 
 	return sb.String()
+}
+
+// bsonGet retrieves a nested value from a map or bson.D by key.
+func bsonGet(data any, key string) any {
+	switch d := data.(type) {
+	case map[string]any:
+		return d[key]
+	case bson.D:
+		for _, e := range d {
+			if e.Key == key {
+				return e.Value
+			}
+		}
+	}
+	return nil
+}
+
+// bsonGetStringDirect retrieves a string value directly from data[key].
+func bsonGetStringDirect(data any, key string) (string, bool) {
+	v := bsonGet(data, key)
+	if v == nil {
+		return "", false
+	}
+	s, ok := v.(string)
+	return s, ok
+}
+
+// bsonGetString navigates nested keys and returns the final string value.
+func bsonGetString(data any, keys ...string) (string, bool) {
+	current := data
+	for i, key := range keys {
+		current = bsonGet(current, key)
+		if current == nil {
+			return "", false
+		}
+		if i == len(keys)-1 {
+			s, ok := current.(string)
+			return s, ok
+		}
+	}
+	return "", false
 }
