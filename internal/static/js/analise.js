@@ -17,8 +17,6 @@
     var truncationWarning = document.getElementById('truncation-warning');
     var summaryContent = document.getElementById('summary-content');
     var downloadMd = document.getElementById('download-md');
-    var downloadDocx = document.getElementById('download-docx');
-    var downloadPdf = document.getElementById('download-pdf');
     var saveBtn = document.getElementById('save-btn');
 
     var currentLattesId = '';
@@ -192,15 +190,7 @@
     });
 
     downloadMd.addEventListener('click', function () {
-        window.open('/api/analysis/download/' + currentLattesId + '?format=md', '_blank');
-        saveAnalysis();
-    });
-    downloadDocx.addEventListener('click', function () {
-        window.open('/api/analysis/download/' + currentLattesId + '?format=docx', '_blank');
-        saveAnalysis();
-    });
-    downloadPdf.addEventListener('click', function () {
-        window.open('/api/analysis/download/' + currentLattesId + '?format=pdf', '_blank');
+        downloadBlob(currentAnalysis, 'analise-' + currentLattesId + '.md', 'text/markdown');
         saveAnalysis();
     });
 
@@ -243,6 +233,18 @@
         var div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function downloadBlob(content, filename, mimeType) {
+        var blob = new Blob([content], { type: mimeType + '; charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     function renderMarkdown(md) {

@@ -32,24 +32,6 @@ Sob o heading `## Potencial de Contribuição Científica`, avalie em 1 a 3 par�
 - O impacto potencial da sua produção com base no volume, diversidade e continuidade
 - Possíveis direções futuras inferidas a partir dos dados mais recentes
 
-### Seção 4: Coautores Mais Frequentes
-
-Sob o heading `## Coautores Mais Frequentes`, liste os coautores que mais aparecem nas produções do pesquisador. Apresente em tabela Markdown com as colunas:
-
-| Coautor | Quantidade de Produções |
-|---------|------------------------|
-
-Ordene do mais frequente para o menos frequente. Limite aos 15 coautores mais frequentes.
-
-### Seção 5: Produção por Área de Especialidade
-
-Sob o heading `## Produção Quantificada por Área`, quantifique a produção do pesquisador agrupada por área de especialidade. Apresente em tabela Markdown com as colunas:
-
-| Área | Artigos em Periódicos | Trabalhos em Eventos | Livros/Capítulos | Orientações | Total |
-|------|----------------------|---------------------|------------------|-------------|-------|
-
-Quando não for possível associar uma produção a uma área específica, agrupe sob "Área não identificada".
-
 ## Regras gerais
 
 - Responda exclusivamente em português brasileiro

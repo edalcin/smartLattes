@@ -18,8 +18,6 @@
     var truncationWarning = document.getElementById('truncation-warning');
     var summaryContent = document.getElementById('summary-content');
     var downloadMd = document.getElementById('download-md');
-    var downloadDocx = document.getElementById('download-docx');
-    var downloadPdf = document.getElementById('download-pdf');
     var saveBtn = document.getElementById('save-btn');
 
     // Analysis elements
@@ -35,8 +33,6 @@
     var analysisTruncationWarning = document.getElementById('analysis-truncation-warning');
     var analysisContent = document.getElementById('analysis-content');
     var analysisDownloadMd = document.getElementById('analysis-download-md');
-    var analysisDownloadDocx = document.getElementById('analysis-download-docx');
-    var analysisDownloadPdf = document.getElementById('analysis-download-pdf');
     var analysisSaveBtn = document.getElementById('analysis-save-btn');
     var currentAnalysis = '';
     var currentResearchersAnalyzed = 0;
@@ -224,15 +220,7 @@
 
     // Download buttons
     downloadMd.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=md', '_blank');
-        saveSummary();
-    });
-    downloadDocx.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=docx', '_blank');
-        saveSummary();
-    });
-    downloadPdf.addEventListener('click', function () {
-        window.open('/api/download/' + currentLattesId + '?format=pdf', '_blank');
+        downloadBlob(currentSummary, 'resumo-' + currentLattesId + '.md', 'text/markdown');
         saveSummary();
     });
 
@@ -334,19 +322,7 @@
 
     if (analysisDownloadMd) {
         analysisDownloadMd.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=md', '_blank');
-            saveAnalysis();
-        });
-    }
-    if (analysisDownloadDocx) {
-        analysisDownloadDocx.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=docx', '_blank');
-            saveAnalysis();
-        });
-    }
-    if (analysisDownloadPdf) {
-        analysisDownloadPdf.addEventListener('click', function () {
-            window.open('/api/analysis/download/' + currentLattesId + '?format=pdf', '_blank');
+            downloadBlob(currentAnalysis, 'analise-' + currentLattesId + '.md', 'text/markdown');
             saveAnalysis();
         });
     }
@@ -392,6 +368,18 @@
         var div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    function downloadBlob(content, filename, mimeType) {
+        var blob = new Blob([content], { type: mimeType + '; charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     function renderMarkdown(md) {
