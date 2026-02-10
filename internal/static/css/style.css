@@ -336,23 +336,31 @@ body {
 
 .stat-card {
     text-align: center;
-    padding: 2rem 3rem;
+    padding: 2.5rem 4rem;
     background: linear-gradient(135deg, var(--color-primary), #2563eb);
     color: #fff;
     border: none;
 }
 
-.stat-number {
+.stat-icon {
     display: block;
     font-size: 3rem;
-    font-weight: 800;
+    margin-bottom: 0.75rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 4.5rem;
+    font-weight: 900;
     line-height: 1;
     margin-bottom: 0.5rem;
 }
 
 .stat-label {
-    font-size: 1.1rem;
-    opacity: 0.9;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .features {
