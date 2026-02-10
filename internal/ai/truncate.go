@@ -46,7 +46,7 @@ func estimateTokens(data map[string]interface{}) int {
 	if err != nil {
 		return 0
 	}
-	return len(b) / 4
+	return len(b) / 3
 }
 
 func getInnerMap(data map[string]interface{}, key string) (map[string]interface{}, bool) {
@@ -121,7 +121,7 @@ func estimateTokensAny(data interface{}) int {
 	if err != nil {
 		return 0
 	}
-	return len(b) / 4
+	return len(b) / 3
 }
 
 func deepCopyAny(src interface{}) interface{} {
@@ -159,10 +159,8 @@ func removeFieldFromCV(cv map[string]interface{}, field string) {
 }
 
 func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[string]interface{}, maxTokens int) (string, bool) {
-	currentCopy := deepCopy(currentCV)
-	if currentCopy == nil {
-		currentCopy = currentCV
-	}
+	// Truncate the main CV first (use half the budget for it)
+	currentCopy, mainTruncated := TruncateCV(currentCV, maxTokens/2)
 
 	othersCopy := make([]interface{}, len(otherCVs))
 	for i, cv := range otherCVs {
@@ -170,15 +168,16 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 	}
 
 	combined := map[string]interface{}{
-		"pesquisador_alvo":    currentCopy,
+		"pesquisador_alvo":     currentCopy,
 		"outros_pesquisadores": othersCopy,
 	}
 
 	if estimateTokensAny(combined) <= maxTokens {
 		b, _ := json.Marshal(combined)
-		return string(b), false
+		return string(b), mainTruncated
 	}
 
+	// Step 1: remove producao-bibliografica from others
 	for i, cv := range othersCopy {
 		cvMap, ok := cv.(map[string]interface{})
 		if !ok {
@@ -194,6 +193,7 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		return string(b), true
 	}
 
+	// Step 2: remove atuacoes-profissionais from others
 	for i, cv := range othersCopy {
 		cvMap, ok := cv.(map[string]interface{})
 		if !ok {
@@ -209,8 +209,51 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		return string(b), true
 	}
 
+	// Step 3: remove formacao-academica-titulacao from others
+	for i, cv := range othersCopy {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		removeFieldFromCV(cvMap, "formacao-academica-titulacao")
+		othersCopy[i] = cvMap
+	}
+	combined["outros_pesquisadores"] = othersCopy
+
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	// Step 4: remove others one by one
 	for n := len(othersCopy); n >= 0; n-- {
 		combined["outros_pesquisadores"] = othersCopy[:n]
+		if estimateTokensAny(combined) <= maxTokens {
+			b, _ := json.Marshal(combined)
+			return string(b), true
+		}
+	}
+
+	// Step 5: aggressively truncate the main CV itself
+	aggressiveCopy := deepCopy(currentCopy)
+	if aggressiveCopy != nil {
+		cv, ok := getInnerMap(aggressiveCopy, "curriculo-vitae")
+		if ok {
+			delete(cv, "dados-complementares")
+			delete(cv, "outra-producao")
+			delete(cv, "producao-tecnica")
+		}
+		combined["pesquisador_alvo"] = aggressiveCopy
+		combined["outros_pesquisadores"] = othersCopy[:0]
+		if estimateTokensAny(combined) <= maxTokens {
+			b, _ := json.Marshal(combined)
+			return string(b), true
+		}
+
+		// Remove producao-bibliografica from main CV as last resort
+		if cv != nil {
+			delete(cv, "producao-bibliografica")
+		}
 		if estimateTokensAny(combined) <= maxTokens {
 			b, _ := json.Marshal(combined)
 			return string(b), true
