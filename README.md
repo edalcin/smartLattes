@@ -1,6 +1,10 @@
-# smartLattes
+<p align="center">
+  <img src="docs/logo.png" alt="smartLattes" width="200">
+</p>
 
-**Estabelecimento de redes de pesquisadores baseadas na análise de seus perfis na Plataforma Lattes, com auxílio da Inteligência Artificial.**
+<h1 align="center">smartLattes</h1>
+
+<p align="center"><strong>Estabelecimento de redes de pesquisadores baseadas na análise de seus perfis na Plataforma Lattes, com auxílio da Inteligência Artificial.</strong></p>
 
 ## Motivação
 
@@ -39,10 +43,8 @@ Responsável pela geração de resumos analíticos de pesquisadores utilizando I
 - **Perfil e Principais Características** — trajetória acadêmica e pontos fortes
 - **Áreas de Especialidade** — lista hierárquica de áreas de atuação
 - **Potencial de Contribuição Científica** — relevância e impacto potencial
-- **Coautores Mais Frequentes** — tabela com os 15 coautores mais frequentes
-- **Produção Quantificada por Área** — tabela com produção por área de especialidade
 
-Os resumos gerados são armazenados no MongoDB e podem ser baixados em formato Markdown (.md).
+Os resumos incluem um cabeçalho padronizado (nome, link Lattes, ID, última atualização, provedor/modelo) gerado automaticamente pelo sistema. São armazenados no MongoDB e podem ser baixados em Markdown (.md), Word (.doc) ou PDF (via impressão).
 
 ### Contexto de Análise
 
@@ -53,13 +55,19 @@ Responsável pela identificação de redes de pesquisa e oportunidades de colabo
 - **Complementaridade de Competências** — mapeamento de habilidades complementares
 - **Oportunidades de Pesquisa** — lacunas e fronteiras de conhecimento identificadas
 
-A análise é oferecida como fluxo opcional após a geração do resumo (nas páginas "Enviar CV" e "Gerar Resumo") e também como página dedicada ("Analisar Relações"). Os relatórios são armazenados na coleção `relacoes` do MongoDB e podem ser baixados em formato Markdown.
+A análise é oferecida como fluxo opcional após a geração do resumo (nas páginas "Enviar CV" e "Gerar Resumo") e também como página dedicada ("Analisar Relações"). Os relatórios são armazenados na coleção `relacoes` do MongoDB e podem ser baixados em Markdown, Word ou PDF.
 
 O sistema aplica uma estratégia progressiva de truncamento para respeitar os limites de tokens dos modelos de IA, priorizando os dados do pesquisador atual e reduzindo progressivamente os dados dos demais currículos.
 
-### Contexto de Apresentação (futuro)
+### Contexto de Apresentação
 
-Responsável pela visualização e exploração dos dados armazenados. Este contexto permitirá a navegação interativa pelos perfis, a visualização gráfica de redes de colaboração, e a consulta a produtos de pesquisa recomendados. Está previsto para implementação futura.
+Responsável pela visualização e consulta dos dados já processados. Inclui:
+
+- **Visualizar Resumo** — busca por nome ou ID Lattes e exibe o resumo salvo com metadados (provedor, modelo, data)
+- **Visualizar Relações** — busca e exibe análises de relações já geradas
+- **Home page** — exibe o número de currículos na base de dados
+
+Ambas as páginas de visualização permitem download em Markdown, Word e PDF.
 
 ## Stack Tecnológico
 
@@ -92,7 +100,7 @@ Responsável pela visualização e exploração dos dados armazenados. Este cont
 4. Clica em "Carregar Modelos" para listar os modelos disponíveis
 5. Seleciona o modelo e clica em "Gerar Resumo"
 6. O sistema envia os dados do CV ao provedor de IA com um prompt estruturado
-7. O resumo gerado é exibido na tela e pode ser baixado em formato Markdown
+7. O resumo gerado é exibido na tela com cabeçalho padronizado e pode ser baixado em Markdown, Word ou PDF
 8. Ao confirmar, o resumo é salvo na coleção `resumos` do MongoDB
 
 ### Análise de Relações entre Pesquisadores
@@ -120,13 +128,25 @@ smartLattes/
 │   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini) + truncamento
 │   ├── export/                  # Exportação de documentos (Markdown)
 │   └── static/                  # Arquivos estáticos (HTML, CSS, JS)
-├── docs/                        # Arquivo XML de exemplo para testes
+├── docs/                        # Logo e documentação auxiliar
 ├── specs/                       # Especificações e artefatos de design
 ├── Dockerfile                   # Build multi-stage
 ├── go.mod                       # Dependências Go
 ├── .env.example                 # Template de variáveis de ambiente
 └── README.md
 ```
+
+## Interface Web
+
+A aplicação possui cinco páginas acessíveis pelo menu principal:
+
+| Página | Rota | Descrição |
+|--------|------|-----------|
+| **Enviar CV** | `/upload` | Upload de XML exportado da Plataforma Lattes |
+| **Gerar Resumo** | `/resumo` | Geração de resumo analítico via IA |
+| **Visualizar Resumo** | `/visualizar-resumo` | Consulta de resumos já gerados |
+| **Analisar Relações** | `/analise` | Análise de redes de pesquisa via IA |
+| **Visualizar Relações** | `/visualizar-relacoes` | Consulta de análises já geradas |
 
 ## Variáveis de Ambiente
 
