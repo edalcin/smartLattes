@@ -227,7 +227,7 @@
         saveSummary();
     });
     downloadPdf.addEventListener('click', function () {
-        downloadAsPdf(currentSummary, selectedNameEl.textContent);
+        downloadAsPdf(currentSummary);
         saveSummary();
     });
 
@@ -335,7 +335,7 @@
     }
     if (analysisDownloadPdf) {
         analysisDownloadPdf.addEventListener('click', function () {
-            downloadAsPdf(currentAnalysis, selectedNameEl.textContent);
+            downloadAsPdf(currentAnalysis);
             saveAnalysis();
         });
     }
@@ -401,12 +401,20 @@
             '</body></html>';
     }
 
-    function downloadAsPdf(content, title) {
+    function downloadAsPdf(content) {
         var html = markdownToHtml(content);
-        var w = window.open('', '_blank');
-        w.document.write(html);
-        w.document.close();
-        w.onload = function () { w.print(); };
+        var iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+        iframe.contentWindow.onafterprint = function () { document.body.removeChild(iframe); };
+        setTimeout(function () { iframe.contentWindow.print(); }, 250);
     }
 
     function renderMarkdown(md) {
