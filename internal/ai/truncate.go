@@ -159,7 +159,7 @@ func removeFieldFromCV(cv map[string]interface{}, field string) {
 }
 
 func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[string]interface{}, maxTokens int) (string, bool) {
-	// Truncate the main CV first (use half the budget for it)
+	// Truncate the main CV (remove low-value fields first, preserve producao-bibliografica)
 	currentCopy, mainTruncated := TruncateCV(currentCV, maxTokens/2)
 
 	othersCopy := make([]interface{}, len(otherCVs))
@@ -177,14 +177,10 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		return string(b), mainTruncated
 	}
 
-	// Step 1: remove producao-bibliografica from others
-	for i, cv := range othersCopy {
-		cvMap, ok := cv.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		removeFieldFromCV(cvMap, "producao-bibliografica")
-		othersCopy[i] = cvMap
+	// Step 1: remove low-value fields from others (NOT producao-bibliografica)
+	lowValueFields := []string{"dados-complementares", "outra-producao", "producao-tecnica"}
+	for _, field := range lowValueFields {
+		removeFieldFromAll(othersCopy, field)
 	}
 	combined["outros_pesquisadores"] = othersCopy
 
@@ -194,14 +190,7 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 	}
 
 	// Step 2: remove atuacoes-profissionais from others
-	for i, cv := range othersCopy {
-		cvMap, ok := cv.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		removeFieldFromCV(cvMap, "atuacoes-profissionais")
-		othersCopy[i] = cvMap
-	}
+	removeFieldFromAll(othersCopy, "atuacoes-profissionais")
 	combined["outros_pesquisadores"] = othersCopy
 
 	if estimateTokensAny(combined) <= maxTokens {
@@ -210,14 +199,7 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 	}
 
 	// Step 3: remove formacao-academica-titulacao from others
-	for i, cv := range othersCopy {
-		cvMap, ok := cv.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		removeFieldFromCV(cvMap, "formacao-academica-titulacao")
-		othersCopy[i] = cvMap
-	}
+	removeFieldFromAll(othersCopy, "formacao-academica-titulacao")
 	combined["outros_pesquisadores"] = othersCopy
 
 	if estimateTokensAny(combined) <= maxTokens {
@@ -225,7 +207,32 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		return string(b), true
 	}
 
-	// Step 4: remove others one by one
+	// Step 4: trim producao-bibliografica arrays in others (keep fewer items)
+	for fraction := 2; fraction <= 8; fraction *= 2 {
+		for _, cv := range othersCopy {
+			cvMap, ok := cv.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			trimProdBibliograficaInCV(cvMap, fraction)
+		}
+		combined["outros_pesquisadores"] = othersCopy
+		if estimateTokensAny(combined) <= maxTokens {
+			b, _ := json.Marshal(combined)
+			return string(b), true
+		}
+	}
+
+	// Step 5: remove producao-bibliografica from others entirely (last resort for others)
+	removeFieldFromAll(othersCopy, "producao-bibliografica")
+	combined["outros_pesquisadores"] = othersCopy
+
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	// Step 6: remove others one by one
 	for n := len(othersCopy); n >= 0; n-- {
 		combined["outros_pesquisadores"] = othersCopy[:n]
 		if estimateTokensAny(combined) <= maxTokens {
@@ -234,32 +241,85 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		}
 	}
 
-	// Step 5: aggressively truncate the main CV itself
-	aggressiveCopy := deepCopy(currentCopy)
-	if aggressiveCopy != nil {
-		cv, ok := getInnerMap(aggressiveCopy, "curriculo-vitae")
-		if ok {
-			delete(cv, "dados-complementares")
-			delete(cv, "outra-producao")
-			delete(cv, "producao-tecnica")
-		}
-		combined["pesquisador_alvo"] = aggressiveCopy
-		combined["outros_pesquisadores"] = othersCopy[:0]
-		if estimateTokensAny(combined) <= maxTokens {
-			b, _ := json.Marshal(combined)
-			return string(b), true
-		}
-
-		// Remove producao-bibliografica from main CV as last resort
-		if cv != nil {
-			delete(cv, "producao-bibliografica")
-		}
-		if estimateTokensAny(combined) <= maxTokens {
-			b, _ := json.Marshal(combined)
-			return string(b), true
-		}
-	}
+	// Step 7: truncate main CV producao-bibliografica
+	truncateMainCVProdBib(combined, maxTokens)
 
 	b, _ := json.Marshal(combined)
 	return string(b), true
+}
+
+// removeFieldFromAll removes a field from all CVs in the slice.
+func removeFieldFromAll(cvs []interface{}, field string) {
+	for _, cv := range cvs {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		removeFieldFromCV(cvMap, field)
+	}
+}
+
+// trimProdBibliograficaInCV reduces producao-bibliografica arrays by the given fraction.
+func trimProdBibliograficaInCV(cvMap map[string]interface{}, fraction int) {
+	inner, ok := cvMap["curriculo-vitae"]
+	if !ok {
+		return
+	}
+	cv, ok := inner.(map[string]interface{})
+	if !ok {
+		return
+	}
+	pb, ok := getInnerMap(cv, "producao-bibliografica")
+	if !ok {
+		return
+	}
+	for _, v := range pb {
+		section, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		for k, iv := range section {
+			arr, ok := iv.([]interface{})
+			if !ok || len(arr) == 0 {
+				continue
+			}
+			keep := len(arr) / fraction
+			if keep < 1 {
+				keep = 1
+			}
+			section[k] = arr[:keep]
+		}
+	}
+}
+
+// truncateMainCVProdBib progressively trims the main CV's producao-bibliografica.
+func truncateMainCVProdBib(combined map[string]interface{}, maxTokens int) {
+	main, ok := combined["pesquisador_alvo"]
+	if !ok {
+		return
+	}
+	mainMap, ok := main.(map[string]interface{})
+	if !ok {
+		return
+	}
+	cv, ok := getInnerMap(mainMap, "curriculo-vitae")
+	if !ok {
+		return
+	}
+	pb, ok := getInnerMap(cv, "producao-bibliografica")
+	if !ok {
+		return
+	}
+	arrays := collectArrays(pb)
+	if len(arrays) == 0 {
+		return
+	}
+	maxLen := maxArrayLen(arrays)
+	for n := maxLen / 2; n >= 1 && estimateTokensAny(combined) > maxTokens; n /= 2 {
+		for _, entry := range arrays {
+			if len(entry.slice) > n {
+				entry.parent[entry.key] = entry.slice[:n]
+			}
+		}
+	}
 }
