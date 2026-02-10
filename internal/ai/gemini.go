@@ -136,6 +136,11 @@ func (p *GeminiProvider) Generate(ctx context.Context, req GenerateRequest) (str
 		return "", fmt.Errorf("erro da API Gemini: status %d: %s", resp.StatusCode, string(respBody))
 	}
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("erro ao ler resposta: %w", err)
+	}
+
 	var result struct {
 		Candidates []struct {
 			Content struct {
@@ -143,14 +148,28 @@ func (p *GeminiProvider) Generate(ctx context.Context, req GenerateRequest) (str
 					Text string `json:"text"`
 				} `json:"parts"`
 			} `json:"content"`
+			FinishReason string `json:"finishReason"`
 		} `json:"candidates"`
+		PromptFeedback struct {
+			BlockReason string `json:"blockReason"`
+		} `json:"promptFeedback"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(strings.NewReader(string(respBody))).Decode(&result); err != nil {
 		return "", fmt.Errorf("erro ao decodificar resposta: %w", err)
 	}
 
 	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("resposta da API Gemini sem conteúdo")
+		if result.PromptFeedback.BlockReason != "" {
+			return "", fmt.Errorf("conteúdo bloqueado pelo Gemini: %s", result.PromptFeedback.BlockReason)
+		}
+		reason := ""
+		if len(result.Candidates) > 0 {
+			reason = result.Candidates[0].FinishReason
+		}
+		if reason != "" {
+			return "", fmt.Errorf("resposta da API Gemini sem conteúdo (motivo: %s)", reason)
+		}
+		return "", fmt.Errorf("resposta da API Gemini sem conteúdo. Resposta: %s", string(respBody))
 	}
 	return result.Candidates[0].Content.Parts[0].Text, nil
 }
