@@ -81,6 +81,7 @@ func main() {
 		Store:  db,
 		Prompt: resumoPrompt,
 	}
+	mux.Handle("/api/stats", &handler.StatsHandler{Store: db})
 	mux.Handle("/api/search", &handler.SearchHandler{Store: db})
 	mux.Handle("/api/models", &handler.ModelsHandler{})
 	mux.Handle("/api/summary", summaryHandler)

@@ -25,6 +25,13 @@
             <a href="/upload" class="btn btn-primary">Enviar Curriculum Vitae</a>
         </section>
 
+        <div class="stats-highlight">
+            <div class="card stat-card">
+                <span class="stat-number" id="cv-count">--</span>
+                <span class="stat-label">curr&iacute;culos na base de dados</span>
+            </div>
+        </div>
+
         <div class="features">
             <div class="card feature-card">
                 <span class="feature-icon" aria-hidden="true">&#128228;</span>
@@ -53,5 +60,10 @@
             </div>
         </div>
     </main>
+    <script>
+    fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
+        if(d.success) document.getElementById('cv-count').textContent=d.count;
+    }).catch(function(){});
+    </script>
 </body>
 </html>
