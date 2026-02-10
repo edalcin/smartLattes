@@ -2,9 +2,9 @@
   <img src="docs/logo.png" alt="smartLattes" width="200">
 </p>
 
-<h1 align="center">smartLattes</h1>
+<h1 align="left">smartLattes</h1>
 
-<p align="center"><strong>Estabelecimento de redes de pesquisadores baseadas na análise de seus perfis na Plataforma Lattes, com auxílio da Inteligência Artificial.</strong></p>
+<p align="left"><strong>Criação de resumos, análises de colaboração e redes de pesquisa, com auxílio da Inteligência Artificial.</strong></p>
 
 ## Motivação
 
@@ -27,6 +27,8 @@ O smartLattes opera sob dois princípios fundamentais:
 1. **Voluntariedade**: os pesquisadores enviam seus currículos por iniciativa própria, mediante upload do arquivo XML exportado diretamente da Plataforma Lattes. Nenhum dado é coletado de forma automatizada ou sem o consentimento explícito do pesquisador.
 
 2. **Dados já públicos**: o arquivo XML exportado pela Plataforma Lattes contém exclusivamente informações que o próprio pesquisador tornou públicas em seu currículo. O smartLattes não solicita, armazena ou processa dados que não estejam já disponíveis publicamente na plataforma.
+
+**<h4>OBSERVAÇÃO: O arquivo .XML exportado pela Plataforma Lattes possui dados sensíveis como número de documentos (CPF, IDENTIDADE), filiação etc. Porém ESTES DADOS NÃO SÃO ARMAZENADOS NA BASE DE DADOS</h4>**
 
 ## Arquitetura
 
