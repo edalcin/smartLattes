@@ -4,7 +4,7 @@
 
 <h1 align="left">smartLattes</h1>
 
-<p align="left"><strong>Criação de resumos, análises de colaboração, redes de pesquisa e conversação inteligente com dados acadêmicos, com auxílio da Inteligência Artificial.</strong></p>
+<p align="left"><strong>Criação de resumos, análises de colaboração, redes de pesquisa e conversação inteligente com dados acadêmicos, com auxílio da Inteligência Artificial. Converse com a base de dados usando o "chatLattes" - um "ChatGPT" dedicado à base de pesquisadores.</strong></p>
 
 ## Motivação
 
