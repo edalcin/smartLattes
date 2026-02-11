@@ -25,6 +25,7 @@
             <h2>Enviar Curriculum Vitae</h2>
             <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
                 Selecione o arquivo XML exportado da Plataforma Lattes para importar seus dados.
+                <button type="button" class="help-link" onclick="document.getElementById('xml-help-modal').classList.add('visible')">Como exportar meu Lattes em XML?</button>
             </p>
 
             <form id="upload-form" enctype="multipart/form-data">
@@ -160,6 +161,23 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal: Como exportar XML -->
+    <div id="xml-help-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('visible')">
+        <div class="modal">
+            <h3>Como exportar seu Curr&iacute;culo Lattes em XML</h3>
+            <p>Exportar o seu Curr&iacute;culo Lattes no formato XML &eacute; um processo r&aacute;pido, mas a op&ccedil;&atilde;o fica um pouco &quot;escondida&quot; nos &iacute;cones laterais. Esse formato &eacute; ideal para quem precisa fazer backups ou importar os dados em outros sistemas acad&ecirc;micos.</p>
+            <ol>
+                <li><strong>Acesse a Plataforma Lattes:</strong> V&aacute; ao site <a href="https://lattes.cnpq.br" target="_blank">lattes.cnpq.br</a> e clique em &quot;Atualizar Curr&iacute;culo&quot;.</li>
+                <li><strong>Fa&ccedil;a o Login:</strong> Entre com seu CPF e senha.</li>
+                <li><strong>Localize o &iacute;cone de Exportar:</strong> Na tela principal do seu curr&iacute;culo (onde voc&ecirc; edita as informa&ccedil;&otilde;es), olhe para o menu de &iacute;cones no lado direito.</li>
+                <li><strong>Clique em Exportar:</strong> Procure pelo &iacute;cone que parece uma caixa com uma seta saindo para a direita (ou passe o mouse sobre os &iacute;cones at&eacute; ler &quot;Exportar&quot;).</li>
+                <li><strong>Escolha o Formato:</strong> Uma janela pop-up abrir&aacute;. Selecione a op&ccedil;&atilde;o &quot;Formato XML do Curr&iacute;culo Lattes&quot;. Clique em <strong>Confirmar</strong>.</li>
+                <li><strong>Download:</strong> O sistema vai gerar um arquivo compactado (geralmente em formato .zip). Salve-o no seu computador.</li>
+            </ol>
+            <button type="button" class="btn btn-primary modal-close" onclick="document.getElementById('xml-help-modal').classList.remove('visible')">Entendi</button>
+        </div>
+    </div>
 
     <script src="/static/js/upload.js"></script>
 </body>
