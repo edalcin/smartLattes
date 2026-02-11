@@ -324,7 +324,15 @@ func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool
 		return string(b), true
 	}
 
-	// Step 3: trim producao-bibliografica arrays progressively
+	// Step 3: remove formacao-academica-titulacao (keep producao-bibliografica as long as possible)
+	removeFieldFromAll(copies, "formacao-academica-titulacao")
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
+	}
+
+	// Step 4: trim producao-bibliografica arrays progressively
 	for fraction := 2; fraction <= 16; fraction *= 2 {
 		for _, cv := range copies {
 			cvMap, ok := cv.(map[string]interface{})
@@ -340,16 +348,8 @@ func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool
 		}
 	}
 
-	// Step 4: remove producao-bibliografica entirely
+	// Step 5: remove producao-bibliografica entirely (last resort before removing CVs)
 	removeFieldFromAll(copies, "producao-bibliografica")
-	wrapper["curriculos"] = copies
-	if estimateTokensAny(wrapper) <= maxTokens {
-		b, _ := json.Marshal(copies)
-		return string(b), true
-	}
-
-	// Step 5: remove formacao-academica-titulacao
-	removeFieldFromAll(copies, "formacao-academica-titulacao")
 	wrapper["curriculos"] = copies
 	if estimateTokensAny(wrapper) <= maxTokens {
 		b, _ := json.Marshal(copies)

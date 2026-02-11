@@ -45,8 +45,9 @@ func (h *ChatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Truncar dados para caber no limite de tokens (8000 tokens para contexto do chat)
-	cvData, _ := ai.TruncateChatData(cvs, 8000)
+	// Truncar dados para caber no limite de tokens
+	// 25000 tokens permite incluir producao-bibliografica (truncada) sem estourar rate limits
+	cvData, _ := ai.TruncateChatData(cvs, 25000)
 
 	systemPrompt := strings.Replace(h.Prompt, "{{DATA}}", cvData, 1)
 
