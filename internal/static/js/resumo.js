@@ -211,6 +211,12 @@
             summaryContent.innerHTML = renderMarkdown(data.summary);
             summarySection.style.display = 'block';
 
+            // Indicar que foi salvo automaticamente
+            if (saveBtn) {
+                saveBtn.textContent = 'Salvo automaticamente';
+                saveBtn.disabled = true;
+            }
+
             if (analysisPromptSection) analysisPromptSection.style.display = 'block';
         })
         .catch(function () {
@@ -224,38 +230,10 @@
     // Download buttons
     downloadMd.addEventListener('click', function () {
         downloadBlob(currentSummary, 'resumo-' + currentLattesId + '.md', 'text/markdown');
-        saveSummary();
     });
     downloadPdf.addEventListener('click', function () {
         downloadAsPdf(currentSummary);
-        saveSummary();
     });
-
-    // Save button
-    saveBtn.addEventListener('click', function () {
-        saveSummary();
-    });
-
-    function saveSummary() {
-        fetch('/api/summary/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                lattesId: currentLattesId,
-                summary: currentSummary,
-                provider: currentProvider,
-                model: currentModel
-            })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.success) {
-                saveBtn.textContent = 'Salvo!';
-                setTimeout(function () { saveBtn.textContent = 'Ok'; }, 2000);
-            }
-        })
-        .catch(function () { /* silently fail save */ });
-    }
 
     // Analysis handlers
     if (analysisYesBtn) {
@@ -311,6 +289,12 @@
 
                 analysisContent.innerHTML = renderMarkdown(result.body.analysis);
                 analysisResult.style.display = 'block';
+
+                // Indicar que foi salvo automaticamente
+                if (analysisSaveBtn) {
+                    analysisSaveBtn.textContent = 'Salvo automaticamente';
+                    analysisSaveBtn.disabled = true;
+                }
             })
             .catch(function () {
                 analysisSpinner.classList.remove('visible');
@@ -330,41 +314,12 @@
     if (analysisDownloadMd) {
         analysisDownloadMd.addEventListener('click', function () {
             downloadBlob(currentAnalysis, 'analise-' + currentLattesId + '.md', 'text/markdown');
-            saveAnalysis();
         });
     }
     if (analysisDownloadPdf) {
         analysisDownloadPdf.addEventListener('click', function () {
             downloadAsPdf(currentAnalysis);
-            saveAnalysis();
         });
-    }
-    if (analysisSaveBtn) {
-        analysisSaveBtn.addEventListener('click', function () {
-            saveAnalysis();
-        });
-    }
-
-    function saveAnalysis() {
-        fetch('/api/analysis/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                lattesId: currentLattesId,
-                analysis: currentAnalysis,
-                provider: currentProvider,
-                model: currentModel,
-                researchersAnalyzed: currentResearchersAnalyzed
-            })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.success && analysisSaveBtn) {
-                analysisSaveBtn.textContent = 'Salvo!';
-                setTimeout(function () { analysisSaveBtn.textContent = 'Ok'; }, 2000);
-            }
-        })
-        .catch(function () { });
     }
 
     // Helpers

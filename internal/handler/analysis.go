@@ -104,6 +104,12 @@ func (h *AnalysisHandler) handleGenerate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Salvar automaticamente no banco de dados
+	if err := h.Store.UpsertAnalysis(r.Context(), req.LattesID, analysis, req.Provider, req.Model, len(otherCVs)); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"success": false, "error": "análise gerada mas erro ao salvar no banco de dados"})
+		return
+	}
+
 	response := map[string]any{
 		"success":             true,
 		"analysis":            analysis,

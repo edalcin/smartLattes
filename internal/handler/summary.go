@@ -103,6 +103,12 @@ func (h *SummaryHandler) handleGenerate(w http.ResponseWriter, r *http.Request) 
 	header := buildSummaryHeader(cvData, req.LattesID, req.Provider, req.Model)
 	summary = header + summary
 
+	// Salvar automaticamente no banco de dados
+	if err := h.Store.UpsertSummary(r.Context(), req.LattesID, summary, req.Provider, req.Model); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"success": false, "error": "resumo gerado mas erro ao salvar no banco de dados"})
+		return
+	}
+
 	response := map[string]any{
 		"success":  true,
 		"summary":  summary,

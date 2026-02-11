@@ -268,6 +268,41 @@ func (m *MongoDB) UpsertAnalysis(ctx context.Context, lattesID, analysis, provid
 	return err
 }
 
+func (m *MongoDB) GetAllCVsForChat(ctx context.Context) ([]map[string]interface{}, error) {
+	collection := m.database.Collection("curriculos")
+
+	projection := bson.M{
+		"_id": 1,
+		"curriculo-vitae.dados-gerais.nome-completo":                1,
+		"curriculo-vitae.dados-gerais.areas-de-atuacao":             1,
+		"curriculo-vitae.dados-gerais.formacao-academica-titulacao":  1,
+		"curriculo-vitae.dados-gerais.atuacoes-profissionais":       1,
+		"curriculo-vitae.producao-bibliografica":                     1,
+	}
+	opts := options.Find().SetProjection(projection)
+
+	cursor, err := collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []map[string]interface{}
+	for cursor.Next(ctx) {
+		var doc map[string]interface{}
+		if err := cursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		results = append(results, doc)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func (m *MongoDB) GetAnalysis(ctx context.Context, lattesID string) (*AnalysisDoc, error) {
 	collection := m.database.Collection("relacoes")
 

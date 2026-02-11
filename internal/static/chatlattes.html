@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chatLattes - smartLattes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">smart<span>Lattes</span></a>
+        <ul class="navbar-nav">
+            <li><a href="/upload">Enviar CV</a></li>
+            <li><a href="/resumo">Gerar Resumo</a></li>
+            <li><a href="/visualizar-resumo">Visualizar Resumo</a></li>
+            <li><a href="/analise">Analisar Rela&ccedil;&otilde;es</a></li>
+            <li><a href="/visualizar-relacoes">Visualizar Rela&ccedil;&otilde;es</a></li>
+            <li><a href="/chatlattes" class="active">chatLattes</a></li>
+        </ul>
+    </nav>
+
+    <div class="chat-container">
+        <!-- Settings Panel -->
+        <div id="chat-settings" class="chat-settings">
+            <div class="card">
+                <h3>Configura&ccedil;&atilde;o da IA</h3>
+                <p class="settings-description">Configure o provedor de IA para iniciar o chat com a base de curr&iacute;culos.</p>
+
+                <div class="form-group">
+                    <label for="provider-select">Provedor</label>
+                    <select id="provider-select" class="form-input">
+                        <option value="">Selecione o provedor...</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="api-key-input">Chave de API</label>
+                    <input type="password" id="api-key-input" class="form-input" placeholder="Digite sua chave de API...">
+                </div>
+
+                <button type="button" id="load-models-btn" class="btn btn-primary" disabled>
+                    Carregar Modelos
+                </button>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="model-select">Modelo</label>
+                    <select id="model-select" class="form-input" disabled>
+                        <option value="">Selecione o modelo...</option>
+                    </select>
+                </div>
+
+                <button type="button" id="start-chat-btn" class="btn btn-primary" disabled>
+                    Iniciar Chat
+                </button>
+
+                <div id="settings-error" class="message message-error"></div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-area" class="chat-area" style="display:none;">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <h2>chatLattes</h2>
+                    <span id="chat-provider-info" class="chat-provider-info"></span>
+                </div>
+                <button type="button" id="new-chat-btn" class="btn btn-secondary btn-sm">Nova Conversa</button>
+            </div>
+
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-welcome">
+                    <div class="chat-welcome-icon">&#128172;</div>
+                    <h3>Bem-vindo ao chatLattes</h3>
+                    <p>Fa&ccedil;a perguntas sobre os curr&iacute;culos Lattes armazenados na base de dados.</p>
+                    <div class="chat-suggestions">
+                        <p class="suggestions-label">Experimente perguntar:</p>
+                        <button class="suggestion-btn" data-text="Quantos pesquisadores est&atilde;o na base?">Quantos pesquisadores na base?</button>
+                        <button class="suggestion-btn" data-text="Quais s&atilde;o as &aacute;reas de atua&ccedil;&atilde;o mais comuns?">&#193;reas de atua&#231;&#227;o mais comuns</button>
+                        <button class="suggestion-btn" data-text="Liste os pesquisadores e suas especialidades">Pesquisadores e especialidades</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea id="chat-input" class="chat-input" placeholder="Digite sua pergunta sobre os curr&iacute;culos..." rows="1"></textarea>
+                    <button type="button" id="send-btn" class="btn btn-primary btn-send" disabled>
+                        <span class="send-icon">&#9654;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/chatlattes.js"></script>
+</body>
+</html>

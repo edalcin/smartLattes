@@ -2,7 +2,7 @@
 
 **Feature**: `smartlattes`
 **Created**: 2026-02-07
-**Updated**: 2026-02-09
+**Updated**: 2026-02-11
 **Status**: Draft
 
 ## Visao Geral
@@ -12,7 +12,8 @@ O smartLattes ingere curriculos exportados em XML da Plataforma Lattes (CNPq), a
 1. **Aquisicao** - Upload e armazenamento de curriculos Lattes (implementado).
 2. **Transformacao** - Geracao de artefatos derivados usando IA (resumo do pesquisador).
 3. **Analise** - Identificacao de relacoes entre pesquisadores usando IA (redes de pesquisa, colaboracoes interdisciplinares).
-4. **Apresentacao** - Visualizacao e exploracao dos dados na base (futuro).
+4. **Conversacao** - Interface de chat com a base de curriculos usando IA (chatLattes).
+5. **Apresentacao** - Visualizacao e exploracao dos dados na base (futuro).
 
 ## Clarifications
 
@@ -43,6 +44,17 @@ O smartLattes ingere curriculos exportados em XML da Plataforma Lattes (CNPq), a
 - Os dados de relacao sao armazenados na colecao `relacoes` do MongoDB com `_id` = lattesID.
 - O prompt de analise fica em `analisePrompt.md` no repositorio, editavel sem alterar codigo.
 - O item "Analisar Relacoes" e adicionado ao menu principal de navegacao.
+
+### Session 2026-02-11
+
+- O contexto de Conversacao e introduzido como novo contexto do C4 Model, permitindo interacao em linguagem natural com a base de curriculos.
+- A interface chatLattes permite ao usuario conversar com a base de dados de curriculos usando provedores de IA (OpenAI, Anthropic, Gemini).
+- O usuario configura provedor, chave de API e modelo antes de iniciar o chat, seguindo o mesmo padrao das demais funcionalidades.
+- O chat suporta historico de conversa (multi-turn), mantendo contexto entre mensagens.
+- Os dados de todos os curriculos sao injetados no system prompt como contexto para o modelo de IA.
+- O prompt de chat fica em `chatPrompt.md` no repositorio, editavel sem alterar codigo.
+- O item "chatLattes" e adicionado ao menu principal de navegacao.
+- O chat NAO armazena conversas no servidor; o historico e mantido apenas no frontend durante a sessao.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -156,6 +168,26 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 
 ---
 
+### User Story 8 - chatLattes: Conversar com a Base de Curriculos (Priority: P2)
+
+O usuario acessa a pagina chatLattes e configura o provedor de IA (OpenAI, Anthropic ou Gemini), sua chave de API e o modelo desejado. Apos a configuracao, uma interface de chat permite enviar perguntas em linguagem natural sobre os dados dos curriculos armazenados na base. O sistema consulta todos os curriculos do MongoDB, injeta os dados como contexto no prompt de sistema e envia a conversa ao provedor de IA, retornando a resposta ao usuario.
+
+**Why this priority**: Oferece uma forma intuitiva e acessivel de explorar os dados da base de curriculos sem necessidade de conhecimento tecnico em consultas de banco de dados.
+
+**Independent Test**: Pode ser testado com pelo menos um CV na base, configurando um provedor com chave valida e fazendo perguntas como "Quantos pesquisadores estao na base?" ou "Quais sao as areas de atuacao mais comuns?".
+
+**Acceptance Scenarios**:
+
+1. **Given** o usuario acessa a pagina chatLattes, **When** a pagina carrega, **Then** o sistema apresenta formulario de configuracao com pulldown de provedor (OpenAI, Anthropic, Gemini), campo para chave de API, botao para carregar modelos e pulldown de modelo.
+2. **Given** o usuario configurou provedor, chave e modelo, **When** clica em "Iniciar Chat", **Then** a interface de chat e exibida com mensagem de boas-vindas e sugestoes de perguntas.
+3. **Given** o chat esta ativo, **When** o usuario envia uma pergunta, **Then** o sistema consulta os curriculos no MongoDB, injeta no system prompt e envia ao provedor de IA, exibindo a resposta formatada em Markdown.
+4. **Given** o chat esta ativo, **When** o usuario envia multiplas mensagens, **Then** o sistema mantém o historico da conversa, enviando todas as mensagens anteriores ao provedor para manter contexto.
+5. **Given** o chat esta ativo, **When** o usuario clica em "Nova Conversa", **Then** o historico e limpo e a interface volta ao estado inicial com mensagem de boas-vindas.
+6. **Given** nao ha curriculos na base de dados, **When** o usuario envia uma mensagem no chat, **Then** o sistema exibe mensagem informando que nao ha curriculos na base.
+7. **Given** o provedor de IA retorna erro, **When** a mensagem falha, **Then** o sistema exibe mensagem de erro na area de chat e permite nova tentativa.
+
+---
+
 ### Edge Cases
 
 - **File exceeds 10MB**: System rejects the upload immediately with a clear error message stating the file size limit.
@@ -172,6 +204,10 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 - **Prompt de analise editavel**: O prompt de analise de relacoes fica em `analisePrompt.md` na raiz do repositorio, permitindo ajustes sem alterar codigo.
 - **Dados de relacao ja existentes**: Se o pesquisador solicitar nova analise e ja existirem dados de relacao armazenados, o sistema substitui (upsert) os dados anteriores com a nova analise.
 - **Volume de dados excede contexto do modelo**: Quando os dados combinados de todos os pesquisadores excedem o limite de tokens, o sistema trunca e avisa o usuario.
+- **chatLattes sem curriculos na base**: Se nao houver curriculos na base quando o usuario enviar uma mensagem no chat, o sistema informa que nao ha dados disponiveis.
+- **chatLattes prompt editavel**: O prompt do chat fica em `chatPrompt.md` no repositorio, editavel sem alterar codigo.
+- **chatLattes historico no frontend**: O historico de conversa e mantido apenas no frontend durante a sessao do navegador; nao e persistido no servidor.
+- **chatLattes timeout**: Se o provedor de IA demorar mais que 120 segundos para responder, o sistema cancela a requisicao e exibe mensagem de timeout.
 
 ## Requirements *(mandatory)*
 
@@ -219,6 +255,20 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 - **FR-208**: Quando os dados combinados dos pesquisadores excederem o limite de contexto do modelo selecionado, o sistema DEVE truncar os dados para caber no limite e exibir aviso ao usuario informando que os resultados podem ser parciais.
 - **FR-209**: O sistema DEVE exibir indicador de progresso durante a geracao da analise de relacoes.
 
+### Functional Requirements - Conversacao (chatLattes)
+
+- **FR-300**: O sistema DEVE apresentar uma pagina "chatLattes" acessivel pelo menu principal de navegacao, com interface de chat para interacao em linguagem natural com a base de curriculos.
+- **FR-301**: A pagina chatLattes DEVE apresentar formulario de configuracao com: pulldown de provedor de IA (OpenAI, Anthropic, Gemini), campo para chave de API, botao para carregar modelos e pulldown de modelo.
+- **FR-302**: Apos o usuario configurar provedor, chave e modelo, o sistema DEVE exibir a interface de chat com mensagem de boas-vindas e sugestoes de perguntas.
+- **FR-303**: O sistema DEVE consultar todos os curriculos da colecao `curriculos` do MongoDB e injeta-los como contexto no system prompt enviado ao provedor de IA.
+- **FR-304**: O sistema DEVE suportar historico de conversa (multi-turn), enviando todas as mensagens anteriores da sessao ao provedor de IA para manter contexto.
+- **FR-305**: O prompt do chat DEVE ser lido do arquivo `chatPrompt.md` no repositorio, permitindo edicao sem alterar codigo.
+- **FR-306**: O sistema DEVE exibir as respostas do assistente formatadas em Markdown (titulos, listas, tabelas, negrito, etc.).
+- **FR-307**: A chave de API do provedor de IA NAO DEVE ser armazenada no servidor. Deve ser usada apenas durante as requisicoes de chat.
+- **FR-308**: O historico de conversa NAO DEVE ser persistido no servidor; e mantido apenas no frontend durante a sessao do navegador.
+- **FR-309**: O sistema DEVE exibir mensagens de erro claras para: chave de API invalida, provedor indisponivel, timeout (120s), base de dados vazia e demais falhas.
+- **FR-310**: O sistema DEVE permitir ao usuario iniciar uma nova conversa, limpando o historico anterior.
+
 ### Key Entities
 
 - **Curriculo (CV)**: Representa o curriculo Lattes de um pesquisador. Identificado por `numero-identificador` (chave primaria). De DADOS-GERAIS, armazena apenas: nome-completo, orcid-id, nome-em-citacoes-bibliograficas, formacao-academica-titulacao, atuacoes-profissionais, areas-de-atuacao. Demais secoes (producao-bibliografica, producao-tecnica, outra-producao, dados-complementares) sao preservadas integralmente. Todos os atributos em caixa baixa.
@@ -233,7 +283,7 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 - **C-003**: The Docker image MUST be published to `ghcr.io/edalcin/`
 - **C-004**: The Docker image should be as small as possible
 - **C-005**: The technology stack should be simple and modern, enabling a clean web interface
-- **C-006**: The application follows the C4 Model architecture with four contexts: acquisition (upload), transformation (AI-powered summary), analysis (AI-powered relationship identification), and presentation (future data visualization)
+- **C-006**: The application follows the C4 Model architecture with five contexts: acquisition (upload), transformation (AI-powered summary), analysis (AI-powered relationship identification), conversation (chatLattes), and presentation (future data visualization)
 - **C-007**: An example Lattes XML file is available at `/docs/8334174268306003.xml` for reference and testing
 - **C-008**: As chaves de API dos provedores de IA sao fornecidas pelo usuario a cada uso e nao sao persistidas
 - **C-009**: O prompt de geracao e mantido em `resumoPrompt.md` no repositorio, versionado junto com o codigo
@@ -241,6 +291,8 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 - **C-011**: A aplicacao serve via HTTP puro (sem TLS). A chave de API transita em texto claro na rede interna confiavel. Se necessario, um reverse proxy externo pode ser adicionado para TLS.
 - **C-012**: O prompt de analise de relacoes e mantido em `analisePrompt.md` no repositorio, versionado junto com o codigo
 - **C-013**: A analise de relacoes reutiliza o provedor, modelo e chave de API ja informados pelo usuario na etapa de geracao de resumo
+- **C-014**: O prompt do chatLattes e mantido em `chatPrompt.md` no repositorio, versionado junto com o codigo
+- **C-015**: O chatLattes nao persiste conversas no servidor; o historico e mantido apenas no frontend
 
 ## Success Criteria *(mandatory)*
 
@@ -263,3 +315,6 @@ O sistema trata adequadamente erros na geracao da analise de relacoes, exibindo 
 - **SC-015**: Os dados de relacao sao armazenados corretamente na colecao `relacoes` do MongoDB, associados ao lattesID
 - **SC-016**: O pesquisador consegue fazer download da analise de relacoes nos tres formatos (.md, .docx, .pdf)
 - **SC-017**: Quando ha apenas um pesquisador na base, o sistema informa adequadamente que nao ha dados para comparacao
+- **SC-018**: O usuario consegue acessar o chatLattes pelo menu de navegacao e conversar com a base de curriculos usando qualquer um dos tres provedores (OpenAI, Anthropic, Gemini) com uma chave de API valida
+- **SC-019**: O chatLattes mantém contexto entre mensagens na mesma sessao, permitindo perguntas de acompanhamento
+- **SC-020**: Quando nao ha curriculos na base, o chatLattes informa adequadamente que nao ha dados disponiveis

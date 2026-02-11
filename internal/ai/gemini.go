@@ -173,3 +173,106 @@ func (p *GeminiProvider) Generate(ctx context.Context, req GenerateRequest) (str
 	}
 	return result.Candidates[0].Content.Parts[0].Text, nil
 }
+
+func (p *GeminiProvider) Chat(ctx context.Context, req ChatRequest) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	maxTokens := req.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = 4096
+	}
+
+	contents := make([]map[string]any, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		role := m.Role
+		if role == "assistant" {
+			role = "model"
+		}
+		contents = append(contents, map[string]any{
+			"role": role,
+			"parts": []map[string]string{
+				{"text": m.Content},
+			},
+		})
+	}
+
+	body := map[string]any{
+		"system_instruction": map[string]any{
+			"parts": []map[string]string{
+				{"text": req.SystemPrompt},
+			},
+		},
+		"contents": contents,
+		"generationConfig": map[string]any{
+			"maxOutputTokens": maxTokens,
+		},
+	}
+
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("erro ao serializar requisição: %w", err)
+	}
+
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", req.Model)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return "", fmt.Errorf("erro ao criar requisição: %w", err)
+	}
+	httpReq.Header.Set("x-goog-api-key", req.APIKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", ErrTimeout
+		}
+		return "", fmt.Errorf("erro ao chamar API Gemini: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return "", ErrInvalidKey
+	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("%w: %s", ErrRateLimited, extractAPIError(respBody, "Gemini"))
+	}
+	if resp.StatusCode >= 500 {
+		return "", fmt.Errorf("%w: status %d", ErrProviderUnavailable, resp.StatusCode)
+	}
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("erro da API Gemini: status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("erro ao ler resposta: %w", err)
+	}
+
+	var result struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+			FinishReason string `json:"finishReason"`
+		} `json:"candidates"`
+		PromptFeedback struct {
+			BlockReason string `json:"blockReason"`
+		} `json:"promptFeedback"`
+	}
+	if err := json.NewDecoder(strings.NewReader(string(respBody))).Decode(&result); err != nil {
+		return "", fmt.Errorf("erro ao decodificar resposta: %w", err)
+	}
+
+	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
+		if result.PromptFeedback.BlockReason != "" {
+			return "", fmt.Errorf("conteúdo bloqueado pelo Gemini: %s", result.PromptFeedback.BlockReason)
+		}
+		return "", fmt.Errorf("resposta da API Gemini sem conteúdo")
+	}
+	return result.Candidates[0].Content.Parts[0].Text, nil
+}

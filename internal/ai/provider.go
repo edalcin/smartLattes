@@ -27,9 +27,23 @@ type GenerateRequest struct {
 	MaxTokens    int
 }
 
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type ChatRequest struct {
+	APIKey       string
+	Model        string
+	SystemPrompt string
+	Messages     []ChatMessage
+	MaxTokens    int
+}
+
 type AIProvider interface {
 	ListModels(ctx context.Context, apiKey string) ([]Model, error)
 	Generate(ctx context.Context, req GenerateRequest) (string, error)
+	Chat(ctx context.Context, req ChatRequest) (string, error)
 }
 
 type OpenAIProvider struct{}
