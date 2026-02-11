@@ -4,7 +4,7 @@
 
 <h1 align="left">smartLattes</h1>
 
-<p align="left"><strong>Criação de resumos, análises de colaboração e redes de pesquisa, com auxílio da Inteligência Artificial.</strong></p>
+<p align="left"><strong>Criação de resumos, análises de colaboração, redes de pesquisa e conversação inteligente com dados acadêmicos, com auxílio da Inteligência Artificial.</strong></p>
 
 ## Motivação
 
@@ -61,12 +61,28 @@ A análise é oferecida como fluxo opcional após a geração do resumo (nas pá
 
 O sistema aplica uma estratégia progressiva de truncamento para respeitar os limites de tokens dos modelos de IA, priorizando os dados do pesquisador atual e reduzindo progressivamente os dados dos demais currículos.
 
+### Contexto de Conversação (chatLattes)
+
+Responsável pela interação conversacional com os dados acadêmicos. O **chatLattes** permite ao usuário "conversar" diretamente com a base de currículos através de linguagem natural, utilizando IA para interpretar perguntas e buscar respostas nos dados armazenados.
+
+O sistema carrega os dados de todos os pesquisadores da base, compacta a produção bibliográfica (extraindo apenas títulos e anos para otimizar o consumo de tokens) e envia como contexto ao modelo de IA escolhido. O usuário pode fazer perguntas como:
+
+- *"Quais as principais publicações de [nome do pesquisador]?"*
+- *"Quais pesquisadores trabalham com etnobotânica?"*
+- *"Quem publicou mais artigos sobre plantas medicinais?"*
+- *"Quais são as áreas de atuação de [nome do pesquisador]?"*
+- *"Existe algum pesquisador que trabalhe com ecologia e botânica ao mesmo tempo?"*
+- *"Faça um comparativo entre as produções de [pesquisador A] e [pesquisador B]"*
+
+A conversa mantém histórico de mensagens, permitindo perguntas de acompanhamento e refinamento dentro da mesma sessão.
+
 ### Contexto de Apresentação
 
 Responsável pela visualização e consulta dos dados já processados. Inclui:
 
 - **Visualizar Resumo** — busca por nome ou ID Lattes e exibe o resumo salvo com metadados (provedor, modelo, data)
 - **Visualizar Relações** — busca e exibe análises de relações já geradas
+- **chatLattes** — interface de chat para conversação inteligente com a base de currículos
 - **Home page** — exibe o número de currículos na base de dados
 
 Ambas as páginas de visualização permitem download em Markdown, Word e PDF.
@@ -122,11 +138,12 @@ smartLattes/
 ├── cmd/smartlattes/
 │   ├── main.go                  # Ponto de entrada, rotas, graceful shutdown
 │   ├── resumoPrompt.md          # Prompt de IA para geração de resumos
-│   └── analisePrompt.md         # Prompt de IA para análise de relações
+│   ├── analisePrompt.md         # Prompt de IA para análise de relações
+│   └── chatPrompt.md            # Prompt de IA para conversação com a base
 ├── internal/
-│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, analysis, download, health)
+│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, analysis, chat, download, health)
 │   ├── parser/                  # Parser XML → JSON (genérico, recursivo)
-│   ├── store/                   # Cliente MongoDB (curriculos + resumos + relacoes)
+│   ├── store/                   # Cliente MongoDB (curriculos + resumos + relacoes + chat)
 │   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini) + truncamento
 │   ├── export/                  # Exportação de documentos (Markdown)
 │   └── static/                  # Arquivos estáticos (HTML, CSS, JS)
@@ -140,7 +157,7 @@ smartLattes/
 
 ## Interface Web
 
-A aplicação possui cinco páginas acessíveis pelo menu principal:
+A aplicação possui seis páginas acessíveis pelo menu principal:
 
 | Página | Rota | Descrição |
 |--------|------|-----------|
@@ -149,6 +166,7 @@ A aplicação possui cinco páginas acessíveis pelo menu principal:
 | **Visualizar Resumo** | `/visualizar-resumo` | Consulta de resumos já gerados |
 | **Analisar Relações** | `/analise` | Análise de redes de pesquisa via IA |
 | **Visualizar Relações** | `/visualizar-relacoes` | Consulta de análises já geradas |
+| **chatLattes** | `/chatlattes` | Chat inteligente com a base de currículos |
 
 ## Variáveis de Ambiente
 
