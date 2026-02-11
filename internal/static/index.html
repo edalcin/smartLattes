@@ -26,7 +26,7 @@
             <p>Importe seu Curriculum Vitae da Plataforma Lattes e armazene seus dados de forma estruturada para consulta e an&aacute;lise.</p>
             <a href="/upload" class="btn btn-primary">Enviar Curriculum Vitae</a>
             <p style="margin-top: 1rem;">
-                <button type="button" class="help-link" onclick="document.getElementById('xml-help-modal').classList.add('visible')">Como exportar meu Lattes em XML?</button>
+                <a href="#" class="help-link" id="open-xml-help">Como exportar meu Lattes em XML?</a>
             </p>
         </section>
 
@@ -73,7 +73,7 @@
     </main>
 
     <!-- Modal: Como exportar XML -->
-    <div id="xml-help-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('visible')">
+    <div id="xml-help-modal" class="modal-overlay">
         <div class="modal">
             <h3>Como exportar seu Curr&iacute;culo Lattes em XML</h3>
             <p>Exportar o seu Curr&iacute;culo Lattes no formato XML &eacute; um processo r&aacute;pido, mas a op&ccedil;&atilde;o fica um pouco &quot;escondida&quot; nos &iacute;cones laterais. Esse formato &eacute; ideal para quem precisa fazer backups ou importar os dados em outros sistemas acad&ecirc;micos.</p>
@@ -85,7 +85,7 @@
                 <li><strong>Escolha o Formato:</strong> Uma janela pop-up abrir&aacute;. Selecione a op&ccedil;&atilde;o &quot;Formato XML do Curr&iacute;culo Lattes&quot;. Clique em <strong>Confirmar</strong>.</li>
                 <li><strong>Download:</strong> O sistema vai gerar um arquivo compactado (geralmente em formato .zip). Salve-o no seu computador.</li>
             </ol>
-            <button type="button" class="btn btn-primary modal-close" onclick="document.getElementById('xml-help-modal').classList.remove('visible')">Entendi</button>
+            <button type="button" class="btn btn-primary modal-close" id="close-xml-help">Entendi</button>
         </div>
     </div>
 
@@ -97,6 +97,20 @@
     fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
         if(d.success) document.getElementById('cv-count').textContent=d.count;
     }).catch(function(){});
+
+    (function(){
+        var modal = document.getElementById('xml-help-modal');
+        document.getElementById('open-xml-help').addEventListener('click', function(e){
+            e.preventDefault();
+            modal.classList.add('visible');
+        });
+        document.getElementById('close-xml-help').addEventListener('click', function(){
+            modal.classList.remove('visible');
+        });
+        modal.addEventListener('click', function(e){
+            if(e.target === modal) modal.classList.remove('visible');
+        });
+    })();
     </script>
 </body>
 </html>
