@@ -292,13 +292,123 @@ func trimProdBibliograficaInCV(cvMap map[string]interface{}, fraction int) {
 	}
 }
 
-// TruncateChatData truncates multiple CVs to fit within a token budget for chat context.
-// It progressively removes less important fields to fit within the limit.
+// compactPublications replaces the full producao-bibliografica with a lightweight
+// list of publication titles and years only, removing co-authors, DOIs, journal details, etc.
+func compactPublications(cvs []interface{}) {
+	// Known title field names in Lattes XML (lowercased)
+	titleFields := map[string]string{
+		"dados-basicos-do-artigo":                    "titulo-do-artigo",
+		"dados-basicos-do-livro":                     "titulo-do-livro",
+		"dados-basicos-do-capitulo":                  "titulo-do-capitulo-do-livro",
+		"dados-basicos-do-trabalho":                  "titulo-do-trabalho",
+		"dados-basicos-do-texto":                     "titulo-do-texto",
+		"dados-basicos-de-outra-producao":            "titulo",
+		"dados-basicos-da-traducao":                  "titulo",
+		"dados-basicos-de-artigo-aceito-para-publicacao": "titulo-do-artigo-aceito-para-publicacao",
+	}
+
+	for _, cv := range cvs {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		inner, ok := cvMap["curriculo-vitae"]
+		if !ok {
+			continue
+		}
+		cvInner, ok := inner.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		pb, ok := cvInner["producao-bibliografica"]
+		if !ok {
+			continue
+		}
+		pbMap, ok := pb.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Build a compact list: [{tipo, titulo, ano}, ...]
+		var publications []map[string]string
+
+		for sectionName, sectionVal := range pbMap {
+			sectionMap, ok := sectionVal.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			for pubType, pubVal := range sectionMap {
+				extractPubs(pubVal, pubType, titleFields, &publications)
+			}
+			_ = sectionName
+		}
+
+		// Replace heavy producao-bibliografica with compact list
+		cvInner["producao-bibliografica"] = publications
+	}
+}
+
+// extractPubs extracts title and year from publication items (single or array).
+func extractPubs(val interface{}, pubType string, titleFields map[string]string, out *[]map[string]string) {
+	items := toSlice(val)
+	for _, item := range items {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		pub := map[string]string{"tipo": pubType}
+		// Search for dados-basicos-* fields to find title and year
+		for dbKey, titleKey := range titleFields {
+			db, ok := itemMap[dbKey]
+			if !ok {
+				continue
+			}
+			dbMap, ok := db.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if t, ok := dbMap[titleKey].(string); ok && t != "" {
+				pub["titulo"] = t
+			}
+			// Year fields vary: ano-do-artigo, ano, ano-do-trabalho, etc.
+			for k, v := range dbMap {
+				if len(k) >= 3 && k[:3] == "ano" {
+					if s, ok := v.(string); ok && s != "" {
+						pub["ano"] = s
+						break
+					}
+				}
+			}
+			break
+		}
+		if pub["titulo"] != "" {
+			*out = append(*out, pub)
+		}
+	}
+}
+
+// toSlice converts a value to a slice of interfaces.
+func toSlice(val interface{}) []interface{} {
+	switch v := val.(type) {
+	case []interface{}:
+		return v
+	case map[string]interface{}:
+		return []interface{}{v}
+	default:
+		return nil
+	}
+}
+
+// TruncateChatData compacts and truncates multiple CVs to fit within a token budget for chat.
+// First it compacts publications to title+year only, then progressively removes fields.
 func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool) {
 	copies := make([]interface{}, len(cvs))
 	for i, cv := range cvs {
 		copies[i] = deepCopyAny(cv)
 	}
+
+	// Step 0: compact producao-bibliografica to titles+years only (massive size reduction)
+	compactPublications(copies)
 
 	wrapper := map[string]interface{}{"curriculos": copies}
 	if estimateTokensAny(wrapper) <= maxTokens {
@@ -324,7 +434,7 @@ func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool
 		return string(b), true
 	}
 
-	// Step 3: remove formacao-academica-titulacao (keep producao-bibliografica as long as possible)
+	// Step 3: remove formacao-academica-titulacao
 	removeFieldFromAll(copies, "formacao-academica-titulacao")
 	wrapper["curriculos"] = copies
 	if estimateTokensAny(wrapper) <= maxTokens {
@@ -332,20 +442,37 @@ func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool
 		return string(b), true
 	}
 
-	// Step 4: trim producao-bibliografica arrays progressively
-	for fraction := 2; fraction <= 16; fraction *= 2 {
-		for _, cv := range copies {
-			cvMap, ok := cv.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			trimProdBibliograficaInCV(cvMap, fraction)
+	// Step 4: trim publication lists (keep recent ones)
+	for _, cv := range copies {
+		cvMap, ok := cv.(map[string]interface{})
+		if !ok {
+			continue
 		}
-		wrapper["curriculos"] = copies
-		if estimateTokensAny(wrapper) <= maxTokens {
-			b, _ := json.Marshal(copies)
-			return string(b), true
+		inner, ok := cvMap["curriculo-vitae"]
+		if !ok {
+			continue
 		}
+		cvInner, ok := inner.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		pubs, ok := cvInner["producao-bibliografica"]
+		if !ok {
+			continue
+		}
+		pubList, ok := pubs.([]map[string]string)
+		if !ok {
+			continue
+		}
+		// Keep only first 30 publications per researcher
+		if len(pubList) > 30 {
+			cvInner["producao-bibliografica"] = pubList[:30]
+		}
+	}
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
 	}
 
 	// Step 5: remove producao-bibliografica entirely (last resort before removing CVs)
@@ -356,7 +483,7 @@ func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool
 		return string(b), true
 	}
 
-	// Step 6: keep only names (last resort) — remove CVs from the end
+	// Step 6: remove CVs from the end
 	for n := len(copies); n >= 0; n-- {
 		wrapper["curriculos"] = copies[:n]
 		if estimateTokensAny(wrapper) <= maxTokens {
