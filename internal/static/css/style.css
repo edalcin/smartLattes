@@ -624,79 +624,132 @@ body {
 
 /* Modal */
 .modal-overlay {
-    display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 2000;
+    display: flex;
     justify-content: center;
     align-items: center;
     padding: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .modal-overlay.visible {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal {
     background-color: var(--color-surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    max-width: 640px;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 560px;
     width: 100%;
-    max-height: 85vh;
+    max-height: 80vh;
     overflow-y: auto;
-    padding: 2rem;
+    padding: 2.5rem;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.25s ease;
+}
+
+.modal-overlay.visible .modal {
+    transform: translateY(0) scale(1);
 }
 
 .modal h3 {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--color-primary);
+    margin-bottom: 1.25rem;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+}
+
+.modal .modal-intro {
+    font-size: 0.92rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
 }
 
 .modal ol {
-    padding-left: 1.5rem;
-    margin: 1rem 0;
+    padding-left: 1.25rem;
+    margin: 0 0 1.5rem;
+    counter-reset: steps;
+    list-style: none;
 }
 
 .modal ol li {
-    margin-bottom: 0.75rem;
+    counter-increment: steps;
+    margin-bottom: 0.85rem;
+    font-size: 0.92rem;
     line-height: 1.6;
+    padding-left: 0.25rem;
+    position: relative;
+}
+
+.modal ol li::before {
+    content: counter(steps);
+    position: absolute;
+    left: -1.5rem;
+    top: 0.05rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .modal ol li strong {
     color: var(--color-text);
+    font-weight: 600;
 }
 
-.modal p {
-    margin-bottom: 0.75rem;
-    line-height: 1.6;
+.modal ol li a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.modal ol li a:hover {
+    text-decoration: underline;
 }
 
 .modal-close {
     display: block;
-    margin: 1.5rem auto 0;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.7rem;
+    font-size: 0.95rem;
 }
 
 .help-link {
     color: var(--color-primary);
     cursor: pointer;
-    text-decoration: underline;
+    text-decoration: none;
     font-weight: 600;
     font-size: 0.9rem;
     background: none;
     border: none;
     padding: 0;
     font-family: var(--font-stack);
+    border-bottom: 1px dashed var(--color-primary);
+    padding-bottom: 1px;
+    transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .help-link:hover {
     color: var(--color-primary-dark);
+    border-bottom-color: var(--color-primary-dark);
 }
 
 /* Responsive */
