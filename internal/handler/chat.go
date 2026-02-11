@@ -45,13 +45,10 @@ func (h *ChatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cvJSON, err := json.Marshal(cvs)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"success": false, "error": "erro ao processar dados"})
-		return
-	}
+	// Truncar dados para caber no limite de tokens (8000 tokens para contexto do chat)
+	cvData, _ := ai.TruncateChatData(cvs, 8000)
 
-	systemPrompt := strings.Replace(h.Prompt, "{{DATA}}", string(cvJSON), 1)
+	systemPrompt := strings.Replace(h.Prompt, "{{DATA}}", cvData, 1)
 
 	provider, err := ai.NewProvider(req.Provider)
 	if err != nil {
@@ -59,11 +56,17 @@ func (h *ChatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Limitar histórico de mensagens para evitar exceder limites de tokens
+	messages := req.Messages
+	if len(messages) > 20 {
+		messages = messages[len(messages)-20:]
+	}
+
 	response, err := provider.Chat(ctx, ai.ChatRequest{
 		APIKey:       req.APIKey,
 		Model:        req.Model,
 		SystemPrompt: systemPrompt,
-		Messages:     req.Messages,
+		Messages:     messages,
 		MaxTokens:    4096,
 	})
 	if err != nil {

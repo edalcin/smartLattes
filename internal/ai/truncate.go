@@ -292,6 +292,83 @@ func trimProdBibliograficaInCV(cvMap map[string]interface{}, fraction int) {
 	}
 }
 
+// TruncateChatData truncates multiple CVs to fit within a token budget for chat context.
+// It progressively removes less important fields to fit within the limit.
+func TruncateChatData(cvs []map[string]interface{}, maxTokens int) (string, bool) {
+	copies := make([]interface{}, len(cvs))
+	for i, cv := range cvs {
+		copies[i] = deepCopyAny(cv)
+	}
+
+	wrapper := map[string]interface{}{"curriculos": copies}
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), false
+	}
+
+	// Step 1: remove low-value fields
+	for _, field := range []string{"dados-complementares", "outra-producao", "producao-tecnica"} {
+		removeFieldFromAll(copies, field)
+	}
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
+	}
+
+	// Step 2: remove atuacoes-profissionais
+	removeFieldFromAll(copies, "atuacoes-profissionais")
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
+	}
+
+	// Step 3: trim producao-bibliografica arrays progressively
+	for fraction := 2; fraction <= 16; fraction *= 2 {
+		for _, cv := range copies {
+			cvMap, ok := cv.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			trimProdBibliograficaInCV(cvMap, fraction)
+		}
+		wrapper["curriculos"] = copies
+		if estimateTokensAny(wrapper) <= maxTokens {
+			b, _ := json.Marshal(copies)
+			return string(b), true
+		}
+	}
+
+	// Step 4: remove producao-bibliografica entirely
+	removeFieldFromAll(copies, "producao-bibliografica")
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
+	}
+
+	// Step 5: remove formacao-academica-titulacao
+	removeFieldFromAll(copies, "formacao-academica-titulacao")
+	wrapper["curriculos"] = copies
+	if estimateTokensAny(wrapper) <= maxTokens {
+		b, _ := json.Marshal(copies)
+		return string(b), true
+	}
+
+	// Step 6: keep only names (last resort) — remove CVs from the end
+	for n := len(copies); n >= 0; n-- {
+		wrapper["curriculos"] = copies[:n]
+		if estimateTokensAny(wrapper) <= maxTokens {
+			b, _ := json.Marshal(copies[:n])
+			return string(b), true
+		}
+	}
+
+	b, _ := json.Marshal(copies)
+	return string(b), true
+}
+
 // truncateMainCVProdBib progressively trims the main CV's producao-bibliografica.
 func truncateMainCVProdBib(combined map[string]interface{}, maxTokens int) {
 	main, ok := combined["pesquisador_alvo"]
