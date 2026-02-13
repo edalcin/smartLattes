@@ -447,9 +447,7 @@
         shareBtn.addEventListener('click', function () {
             fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
                 var url = cfg.shareBaseUrl + '?resumo=' + currentLattesId;
-                navigator.clipboard.writeText(url).then(function(){
-                    showShareFeedback(shareBtn);
-                });
+                copyToClipboard(url, shareBtn);
             });
         });
     }
@@ -457,11 +455,33 @@
         analysisShareBtn.addEventListener('click', function () {
             fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
                 var url = cfg.shareBaseUrl + '?analise=' + currentLattesId;
-                navigator.clipboard.writeText(url).then(function(){
-                    showShareFeedback(analysisShareBtn);
-                });
+                copyToClipboard(url, analysisShareBtn);
             });
         });
+    }
+
+    function copyToClipboard(text, btn) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                showShareFeedback(btn);
+            }).catch(function () {
+                fallbackCopy(text, btn);
+            });
+        } else {
+            fallbackCopy(text, btn);
+        }
+    }
+
+    function fallbackCopy(text, btn) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showShareFeedback(btn);
     }
 
     function showShareFeedback(btn) {

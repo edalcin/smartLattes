@@ -98,9 +98,9 @@ body {
 }
 
 .hero-logo {
-    max-width: 80px;
+    max-width: 120px;
     height: auto;
-    margin: 0 auto 1.25rem;
+    margin: 0 auto 1.5rem;
     display: block;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
     transition: transform 0.3s ease, filter 0.3s ease;
@@ -786,7 +786,7 @@ body {
     }
 
     .hero-logo {
-        max-width: 64px;
+        max-width: 90px;
     }
 
     .hero h1 {
