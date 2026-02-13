@@ -98,11 +98,17 @@ body {
 }
 
 .hero-logo {
-    max-width: 150px;
+    max-width: 80px;
     height: auto;
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.25rem;
     display: block;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.hero-logo:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
 }
 
 .hero h1 {
@@ -777,6 +783,10 @@ body {
 
     .main-content {
         padding-top: 80px;
+    }
+
+    .hero-logo {
+        max-width: 64px;
     }
 
     .hero h1 {
