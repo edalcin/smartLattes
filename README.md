@@ -87,6 +87,15 @@ Responsável pela visualização e consulta dos dados já processados. Inclui:
 
 Ambas as páginas de visualização permitem download em Markdown, Word e PDF.
 
+### Compartilhamento via Link
+
+Resumos e análises podem ser compartilhados através de links diretos. Em todas as páginas que exibem resumos ou análises, um botão **"Compartilhar"** copia para a área de transferência um link no formato:
+
+- `https://dominio/?resumo=LATTES_ID` — para resumos
+- `https://dominio/?analise=LATTES_ID` — para análises de relações
+
+Ao abrir o link, o destinatário visualiza o conteúdo em uma página somente-leitura com o resumo ou análise renderizado, metadados do pesquisador e opções de download em Markdown e PDF. A URL base dos links é configurada pela variável de ambiente `URL_BASE`.
+
 ## Stack Tecnológico
 
 | Componente | Tecnologia | Justificativa |
@@ -141,7 +150,7 @@ smartLattes/
 │   ├── analisePrompt.md         # Prompt de IA para análise de relações
 │   └── chatPrompt.md            # Prompt de IA para conversação com a base
 ├── internal/
-│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, analysis, chat, download, health)
+│   ├── handler/                 # Handlers HTTP (upload, search, models, summary, analysis, chat, download, config, health)
 │   ├── parser/                  # Parser XML → JSON (genérico, recursivo)
 │   ├── store/                   # Cliente MongoDB (curriculos + resumos + relacoes + chat)
 │   ├── ai/                      # Provedores de IA (OpenAI, Anthropic, Gemini) + truncamento
@@ -157,7 +166,7 @@ smartLattes/
 
 ## Interface Web
 
-A aplicação possui seis páginas acessíveis pelo menu principal:
+A aplicação possui seis páginas acessíveis pelo menu principal, além de uma página de compartilhamento:
 
 | Página | Rota | Descrição |
 |--------|------|-----------|
@@ -167,6 +176,7 @@ A aplicação possui seis páginas acessíveis pelo menu principal:
 | **Analisar Relações** | `/analise` | Análise de redes de pesquisa via IA |
 | **Visualizar Relações** | `/visualizar-relacoes` | Consulta de análises já geradas |
 | **chatLattes** | `/chatlattes` | Chat inteligente com a base de currículos |
+| **Compartilhar** | `/?resumo=ID` ou `/?analise=ID` | Visualização somente-leitura de resumo ou análise compartilhado |
 
 ## Variáveis de Ambiente
 
@@ -176,6 +186,7 @@ A aplicação possui seis páginas acessíveis pelo menu principal:
 | `MONGODB_DATABASE` | Não | `smartLattes` | Nome do banco de dados |
 | `PORT` | Não | `8080` | Porta do servidor HTTP |
 | `MAX_UPLOAD_SIZE` | Não | `10485760` | Tamanho máximo de upload em bytes (10 MB) |
+| `URL_BASE` | Não | `http://localhost:8080` | URL base para links de compartilhamento |
 
 ## Deploy
 
