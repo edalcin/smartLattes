@@ -1,81 +1,39 @@
 (function () {
-    var searchInput = document.getElementById('search-input');
-    var searchResults = document.getElementById('search-results');
-    var selectedCv = document.getElementById('selected-cv');
-    var selectedName = document.getElementById('selected-name');
-    var selectedLattesId = document.getElementById('selected-lattes-id');
     var spinner = document.getElementById('spinner');
     var errorMsg = document.getElementById('error-message');
-    var infoMsg = document.getElementById('info-message');
-    var summarySection = document.getElementById('summary-section');
+    var contentSection = document.getElementById('content-section');
+    var contentTitle = document.getElementById('content-title');
     var metadata = document.getElementById('metadata');
-    var summaryContent = document.getElementById('summary-content');
+    var contentBody = document.getElementById('content-body');
     var downloadMd = document.getElementById('download-md');
     var downloadPdf = document.getElementById('download-pdf');
 
-    var shareBtn = document.getElementById('share-btn');
+    var currentContent = '';
+    var currentId = '';
+    var currentType = '';
 
-    var currentLattesId = '';
-    var currentSummary = '';
-    var searchTimeout = null;
+    var params = new URLSearchParams(window.location.search);
+    var resumoId = params.get('resumo');
+    var analiseId = params.get('analise');
 
-    searchInput.addEventListener('input', function () {
-        var query = searchInput.value.trim();
-        if (searchTimeout) clearTimeout(searchTimeout);
-
-        if (query.length < 3) {
-            searchResults.innerHTML = '';
-            return;
-        }
-
-        searchTimeout = setTimeout(function () {
-            fetch('/api/search?q=' + encodeURIComponent(query))
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    if (!data.success || !data.results || data.results.length === 0) {
-                        searchResults.innerHTML = '<p class="search-empty">Nenhum resultado encontrado</p>';
-                        return;
-                    }
-                    var html = '';
-                    for (var i = 0; i < data.results.length; i++) {
-                        var cv = data.results[i];
-                        html += '<div class="search-result-card" data-lattes-id="' + cv.lattesId + '" data-name="' + escapeHtml(cv.name) + '">';
-                        html += '<strong>' + escapeHtml(cv.name) + '</strong>';
-                        html += '<span class="search-result-id">' + cv.lattesId + '</span>';
-                        html += '</div>';
-                    }
-                    searchResults.innerHTML = html;
-
-                    var cards = searchResults.querySelectorAll('.search-result-card');
-                    for (var j = 0; j < cards.length; j++) {
-                        cards[j].addEventListener('click', function () {
-                            selectCV(this.getAttribute('data-lattes-id'), this.getAttribute('data-name'));
-                        });
-                    }
-                })
-                .catch(function () {
-                    searchResults.innerHTML = '<p class="search-empty">Erro ao buscar</p>';
-                });
-        }, 300);
-    });
-
-    function selectCV(lattesId, name) {
-        currentLattesId = lattesId;
-        selectedName.textContent = name;
-        selectedLattesId.textContent = lattesId;
-        selectedCv.style.display = 'block';
-        searchResults.innerHTML = '';
-        hideMessages();
-        summarySection.style.display = 'none';
-
-        loadSummary(lattesId);
+    if (resumoId) {
+        currentId = resumoId;
+        currentType = 'resumo';
+        document.title = 'Resumo - smartLattes';
+        loadContent('/api/summary/view/' + resumoId, 'Resumo do Pesquisador');
+    } else if (analiseId) {
+        currentId = analiseId;
+        currentType = 'analise';
+        document.title = 'An\u00e1lise de Rela\u00e7\u00f5es - smartLattes';
+        loadContent('/api/analysis/view/' + analiseId, 'An\u00e1lise de Rela\u00e7\u00f5es');
+    } else {
+        showError('Link inv\u00e1lido. Nenhum resumo ou an\u00e1lise especificado.');
     }
 
-    function loadSummary(lattesId) {
+    function loadContent(url, title) {
         spinner.classList.add('visible');
-        hideMessages();
 
-        fetch('/api/summary/view/' + lattesId)
+        fetch(url)
             .then(function (r) {
                 return r.json().then(function (data) {
                     return { status: r.status, body: data };
@@ -85,16 +43,19 @@
                 spinner.classList.remove('visible');
 
                 if (result.status === 404) {
-                    showInfo(result.body.error || 'Nenhum resumo salvo para este pesquisador');
+                    showError(result.body.error || 'Conte\u00fado n\u00e3o encontrado.');
                     return;
                 }
 
                 if (!result.body.success) {
-                    showError(result.body.error || 'Erro ao carregar resumo');
+                    showError(result.body.error || 'Erro ao carregar conte\u00fado.');
                     return;
                 }
 
-                currentSummary = result.body.summary;
+                var text = result.body.summary || result.body.analysis || '';
+                currentContent = text;
+
+                contentTitle.textContent = title;
 
                 var metaHtml = '<p class="metadata-text">Gerado por <strong>' +
                     escapeHtml(result.body.provider) + '</strong> / <strong>' +
@@ -103,58 +64,32 @@
                     var date = new Date(result.body.generatedAt);
                     metaHtml += ' em ' + date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
                 }
+                if (result.body.researchersAnalyzed) {
+                    metaHtml += ' &mdash; ' + result.body.researchersAnalyzed + ' pesquisadores analisados';
+                }
                 metaHtml += '</p>';
                 metadata.innerHTML = metaHtml;
 
-                summaryContent.innerHTML = renderMarkdown(result.body.summary);
-                summarySection.style.display = 'block';
-
-                if (shareBtn) shareBtn.style.display = '';
+                contentBody.innerHTML = renderMarkdown(text);
+                contentSection.style.display = 'block';
             })
             .catch(function () {
                 spinner.classList.remove('visible');
-                showError('Erro de conexão ao carregar resumo');
+                showError('Erro de conex\u00e3o ao carregar conte\u00fado.');
             });
     }
 
     downloadMd.addEventListener('click', function () {
-        downloadBlob(currentSummary, 'resumo-' + currentLattesId + '.md', 'text/markdown');
+        var prefix = currentType === 'resumo' ? 'resumo-' : 'analise-';
+        downloadBlob(currentContent, prefix + currentId + '.md', 'text/markdown');
     });
     downloadPdf.addEventListener('click', function () {
-        downloadAsPdf(currentSummary);
+        downloadAsPdf(currentContent);
     });
-
-    if (shareBtn) {
-        shareBtn.addEventListener('click', function () {
-            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
-                var url = cfg.shareBaseUrl + '?resumo=' + currentLattesId;
-                navigator.clipboard.writeText(url).then(function(){
-                    showShareFeedback(shareBtn);
-                });
-            });
-        });
-    }
-
-    function showShareFeedback(btn) {
-        var original = btn.textContent;
-        btn.textContent = 'Link copiado!';
-        btn.disabled = true;
-        setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 2000);
-    }
 
     function showError(message) {
         errorMsg.textContent = message;
         errorMsg.classList.add('visible');
-    }
-
-    function showInfo(message) {
-        infoMsg.textContent = message;
-        infoMsg.classList.add('visible');
-    }
-
-    function hideMessages() {
-        errorMsg.classList.remove('visible');
-        infoMsg.classList.remove('visible');
     }
 
     function escapeHtml(text) {

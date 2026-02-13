@@ -40,6 +40,9 @@
     var currentAnalysis = '';
     var currentResearchersAnalyzed = 0;
 
+    var shareBtn = document.getElementById('share-btn');
+    var analysisShareBtn = document.getElementById('analysis-share-btn');
+
     var currentLattesId = '';
     var currentSummary = '';
     var currentProvider = '';
@@ -217,6 +220,8 @@
                 saveBtn.disabled = true;
             }
 
+            if (shareBtn) shareBtn.style.display = '';
+
             if (analysisPromptSection) analysisPromptSection.style.display = 'block';
         })
         .catch(function () {
@@ -226,6 +231,28 @@
             showError('Erro de conexão ao gerar resumo');
         });
     });
+
+    // Share buttons
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function () {
+            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+                var url = cfg.shareBaseUrl + '?resumo=' + currentLattesId;
+                navigator.clipboard.writeText(url).then(function(){
+                    showShareFeedback(shareBtn);
+                });
+            });
+        });
+    }
+    if (analysisShareBtn) {
+        analysisShareBtn.addEventListener('click', function () {
+            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+                var url = cfg.shareBaseUrl + '?analise=' + currentLattesId;
+                navigator.clipboard.writeText(url).then(function(){
+                    showShareFeedback(analysisShareBtn);
+                });
+            });
+        });
+    }
 
     // Download buttons
     downloadMd.addEventListener('click', function () {
@@ -289,6 +316,8 @@
 
                 analysisContent.innerHTML = renderMarkdown(result.body.analysis);
                 analysisResult.style.display = 'block';
+
+                if (analysisShareBtn) analysisShareBtn.style.display = '';
 
                 // Indicar que foi salvo automaticamente
                 if (analysisSaveBtn) {
@@ -370,6 +399,13 @@
         iframe.contentDocument.close();
         iframe.contentWindow.onafterprint = function () { document.body.removeChild(iframe); };
         setTimeout(function () { iframe.contentWindow.print(); }, 250);
+    }
+
+    function showShareFeedback(btn) {
+        var original = btn.textContent;
+        btn.textContent = 'Link copiado!';
+        btn.disabled = true;
+        setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 2000);
     }
 
     function renderMarkdown(md) {

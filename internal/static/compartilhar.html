@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Explorar Dados - smartLattes</title>
+    <title>smartLattes</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -37,11 +37,23 @@
     </nav>
 
     <main class="main-content">
-        <div class="card coming-soon">
-            <span class="coming-soon-icon" aria-hidden="true">&#128640;</span>
-            <h2>Em breve</h2>
-            <p>A funcionalidade de explora&ccedil;&atilde;o de dados est&aacute; em desenvolvimento. Em breve voc&ecirc; poder&aacute; visualizar, pesquisar e analisar os curr&iacute;culos importados na base de dados.</p>
+        <div class="card">
+            <div class="spinner" id="spinner"></div>
+            <div id="error-message" class="message message-error"></div>
+
+            <div id="content-section" style="display:none;">
+                <h2 id="content-title"></h2>
+                <div id="metadata" class="metadata-info"></div>
+                <div id="content-body" class="summary-content"></div>
+
+                <div class="download-actions">
+                    <button type="button" class="btn btn-secondary" id="download-md">Baixar .md</button>
+                    <button type="button" class="btn btn-secondary" id="download-pdf">Baixar .pdf</button>
+                </div>
+            </div>
         </div>
     </main>
+
+    <script src="/static/js/compartilhar.js"></script>
 </body>
 </html>

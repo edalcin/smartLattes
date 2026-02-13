@@ -41,6 +41,8 @@
     var analysisDownloadMd = document.getElementById('analysis-download-md');
     var analysisDownloadPdf = document.getElementById('analysis-download-pdf');
     var analysisSaveBtn = document.getElementById('analysis-save-btn');
+    var shareBtn = document.getElementById('share-btn');
+    var analysisShareBtn = document.getElementById('analysis-share-btn');
     var currentAnalysis = '';
     var currentResearchersAnalyzed = 0;
 
@@ -283,6 +285,8 @@
                 summaryContent.innerHTML = renderMarkdown(data.summary);
                 summarySection.style.display = 'block';
 
+                if (shareBtn) shareBtn.style.display = '';
+
                 if (analysisPromptSection) analysisPromptSection.style.display = 'block';
             })
             .catch(function () {
@@ -381,6 +385,8 @@
 
                 analysisContent.innerHTML = renderMarkdown(result.body.analysis);
                 analysisResult.style.display = 'block';
+
+                if (analysisShareBtn) analysisShareBtn.style.display = '';
             })
             .catch(function () {
                 analysisSpinner.classList.remove('visible');
@@ -435,6 +441,34 @@
             }
         })
         .catch(function () { });
+    }
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function () {
+            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+                var url = cfg.shareBaseUrl + '?resumo=' + currentLattesId;
+                navigator.clipboard.writeText(url).then(function(){
+                    showShareFeedback(shareBtn);
+                });
+            });
+        });
+    }
+    if (analysisShareBtn) {
+        analysisShareBtn.addEventListener('click', function () {
+            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+                var url = cfg.shareBaseUrl + '?analise=' + currentLattesId;
+                navigator.clipboard.writeText(url).then(function(){
+                    showShareFeedback(analysisShareBtn);
+                });
+            });
+        });
+    }
+
+    function showShareFeedback(btn) {
+        var original = btn.textContent;
+        btn.textContent = 'Link copiado!';
+        btn.disabled = true;
+        setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 2000);
     }
 
     function showAiError(message) {

@@ -5,7 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>smartLattes</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//matomo.dalc.in/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '9']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
 </head>
 <body>
     <nav class="navbar">
@@ -22,6 +38,7 @@
 
     <main class="main-content">
         <section class="hero">
+            <img src="/static/images/logo.png" alt="smartLattes Logo" class="hero-logo">
             <h1>Gerencie seus dados Lattes</h1>
             <p>Importe seu Curriculum Vitae da Plataforma Lattes e armazene seus dados de forma estruturada para consulta e an&aacute;lise.</p>
             <a href="/upload" class="btn btn-primary">Enviar Curriculum Vitae</a>

@@ -26,3 +26,19 @@ func PageHandler(filename string) http.HandlerFunc {
 		w.Write(data)
 	}
 }
+
+func SharePageHandler(indexFile, shareFile string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		filename := indexFile
+		if r.URL.Query().Get("resumo") != "" || r.URL.Query().Get("analise") != "" {
+			filename = shareFile
+		}
+		data, err := staticFS.ReadFile(filename)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(data)
+	}
+}

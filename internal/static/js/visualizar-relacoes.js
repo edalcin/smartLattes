@@ -13,6 +13,8 @@
     var downloadMd = document.getElementById('download-md');
     var downloadPdf = document.getElementById('download-pdf');
 
+    var shareBtn = document.getElementById('share-btn');
+
     var currentLattesId = '';
     var currentAnalysis = '';
     var searchTimeout = null;
@@ -109,6 +111,8 @@
 
                 analysisContent.innerHTML = renderMarkdown(result.body.analysis);
                 analysisSection.style.display = 'block';
+
+                if (shareBtn) shareBtn.style.display = '';
             })
             .catch(function () {
                 spinner.classList.remove('visible');
@@ -122,6 +126,24 @@
     downloadPdf.addEventListener('click', function () {
         downloadAsPdf(currentAnalysis);
     });
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function () {
+            fetch('/api/config').then(function(r){return r.json()}).then(function(cfg){
+                var url = cfg.shareBaseUrl + '?analise=' + currentLattesId;
+                navigator.clipboard.writeText(url).then(function(){
+                    showShareFeedback(shareBtn);
+                });
+            });
+        });
+    }
+
+    function showShareFeedback(btn) {
+        var original = btn.textContent;
+        btn.textContent = 'Link copiado!';
+        btn.disabled = true;
+        setTimeout(function () { btn.textContent = original; btn.disabled = false; }, 2000);
+    }
 
     function showError(message) {
         errorMsg.textContent = message;

@@ -41,6 +41,11 @@ func main() {
 		port = "8080"
 	}
 
+	urlBase := os.Getenv("URL_BASE")
+	if urlBase == "" {
+		urlBase = "http://localhost:8080"
+	}
+
 	maxUploadSize := int64(10485760)
 	if v := os.Getenv("MAX_UPLOAD_SIZE"); v != "" {
 		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
@@ -64,7 +69,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", handler.PageHandler("index.html"))
+	mux.HandleFunc("/", handler.SharePageHandler("index.html", "compartilhar.html"))
 	mux.HandleFunc("/upload", handler.PageHandler("upload.html"))
 	mux.HandleFunc("/resumo", handler.PageHandler("resumo.html"))
 	mux.HandleFunc("/visualizar-resumo", handler.PageHandler("visualizar-resumo.html"))
@@ -72,6 +77,8 @@ func main() {
 	mux.HandleFunc("/visualizar-relacoes", handler.PageHandler("visualizar-relacoes.html"))
 	mux.HandleFunc("/chatlattes", handler.PageHandler("chatlattes.html"))
 	mux.Handle("/static/", http.StripPrefix("/static/", handler.StaticHandler()))
+
+	mux.Handle("/api/config", &handler.ConfigHandler{ShareBaseURL: urlBase})
 
 	mux.Handle("/api/upload", &handler.UploadHandler{
 		Store:         db,

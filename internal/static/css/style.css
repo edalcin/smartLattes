@@ -97,6 +97,14 @@ body {
     padding: 3rem 0;
 }
 
+.hero-logo {
+    max-width: 150px;
+    height: auto;
+    margin: 0 auto 2rem;
+    display: block;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
 .hero h1 {
     font-size: 2.5rem;
     font-weight: 800;
