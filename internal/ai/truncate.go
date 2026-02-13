@@ -46,7 +46,7 @@ func estimateTokens(data map[string]interface{}) int {
 	if err != nil {
 		return 0
 	}
-	return len(b) / 3
+	return len(b) * 2 / 5
 }
 
 func getInnerMap(data map[string]interface{}, key string) (map[string]interface{}, bool) {
@@ -121,7 +121,7 @@ func estimateTokensAny(data interface{}) int {
 	if err != nil {
 		return 0
 	}
-	return len(b) / 3
+	return len(b) * 2 / 5
 }
 
 func deepCopyAny(src interface{}) interface{} {
@@ -166,6 +166,12 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 	for i, cv := range otherCVs {
 		othersCopy[i] = deepCopyAny(cv)
 	}
+
+	// Step 0: compact publications to title+year only (massive size reduction)
+	compactPublications(othersCopy)
+	mainSlice := []interface{}{currentCopy}
+	compactPublications(mainSlice)
+	currentCopy, _ = mainSlice[0].(map[string]interface{})
 
 	combined := map[string]interface{}{
 		"pesquisador_alvo":     currentCopy,
