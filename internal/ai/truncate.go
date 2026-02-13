@@ -159,8 +159,8 @@ func removeFieldFromCV(cv map[string]interface{}, field string) {
 }
 
 func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[string]interface{}, maxTokens int) (string, bool) {
-	// Truncate the main CV (remove low-value fields first, preserve producao-bibliografica)
-	currentCopy, mainTruncated := TruncateCV(currentCV, maxTokens/2)
+	// Allocate 1/3 of budget for main CV, leaving 2/3 for others (others are the point of analysis)
+	currentCopy, mainTruncated := TruncateCV(currentCV, maxTokens/3)
 
 	othersCopy := make([]interface{}, len(otherCVs))
 	for i, cv := range otherCVs {
@@ -229,7 +229,7 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		}
 	}
 
-	// Step 5: remove producao-bibliografica from others entirely (last resort for others)
+	// Step 5: remove producao-bibliografica from others entirely
 	removeFieldFromAll(othersCopy, "producao-bibliografica")
 	combined["outros_pesquisadores"] = othersCopy
 
@@ -238,8 +238,26 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		return string(b), true
 	}
 
-	// Step 6: remove others one by one
-	for n := len(othersCopy); n >= 0; n-- {
+	// Step 6: truncate main CV before dropping researchers
+	truncateMainCVProdBib(combined, maxTokens)
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	// Step 7: remove low-value fields from main CV too
+	for _, field := range []string{"dados-complementares", "outra-producao", "producao-tecnica", "atuacoes-profissionais"} {
+		if mainMap, ok := combined["pesquisador_alvo"].(map[string]interface{}); ok {
+			removeFieldFromCV(mainMap, field)
+		}
+	}
+	if estimateTokensAny(combined) <= maxTokens {
+		b, _ := json.Marshal(combined)
+		return string(b), true
+	}
+
+	// Step 8: remove others one by one, but ALWAYS keep at least 1
+	for n := len(othersCopy); n >= 1; n-- {
 		combined["outros_pesquisadores"] = othersCopy[:n]
 		if estimateTokensAny(combined) <= maxTokens {
 			b, _ := json.Marshal(combined)
@@ -247,8 +265,9 @@ func TruncateAnalysisData(currentCV map[string]interface{}, otherCVs []map[strin
 		}
 	}
 
-	// Step 7: truncate main CV producao-bibliografica
-	truncateMainCVProdBib(combined, maxTokens)
+	// Step 9: still too large with 1 researcher — strip areas-de-atuacao from remaining other
+	combined["outros_pesquisadores"] = othersCopy[:1]
+	removeFieldFromAll(othersCopy[:1], "areas-de-atuacao")
 
 	b, _ := json.Marshal(combined)
 	return string(b), true
