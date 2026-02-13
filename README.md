@@ -94,7 +94,7 @@ Resumos e análises podem ser compartilhados através de links diretos. Em todas
 - `https://dominio/?resumo=LATTES_ID` — para resumos
 - `https://dominio/?analise=LATTES_ID` — para análises de relações
 
-Ao abrir o link, o destinatário visualiza o conteúdo em uma página somente-leitura com o resumo ou análise renderizado, metadados do pesquisador e opções de download em Markdown e PDF. A URL base dos links é configurada pela variável de ambiente `URL_BASE`.
+Ao abrir o link, o destinatário visualiza o conteúdo em uma página somente-leitura com o resumo ou análise renderizado, metadados do pesquisador e opções de download em Markdown e PDF. A URL base dos links é configurada pela variável de ambiente `BASE_URL`.
 
 ## Stack Tecnológico
 
@@ -186,7 +186,7 @@ A aplicação possui seis páginas acessíveis pelo menu principal, além de uma
 | `MONGODB_DATABASE` | Não | `smartLattes` | Nome do banco de dados |
 | `PORT` | Não | `8080` | Porta do servidor HTTP |
 | `MAX_UPLOAD_SIZE` | Não | `10485760` | Tamanho máximo de upload em bytes (10 MB) |
-| `URL_BASE` | Não | `http://localhost:8080` | URL base para links de compartilhamento |
+| `BASE_URL` | Não | `http://localhost:8080` | URL base para links de compartilhamento |
 
 ## Deploy
 

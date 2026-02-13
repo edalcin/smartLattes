@@ -41,7 +41,7 @@ func main() {
 		port = "8080"
 	}
 
-	urlBase := os.Getenv("URL_BASE")
+	urlBase := os.Getenv("BASE_URL")
 	if urlBase == "" {
 		urlBase = "http://localhost:8080"
 	}
