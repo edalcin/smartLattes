@@ -46,6 +46,8 @@ func main() {
 		urlBase = "http://localhost:8080"
 	}
 
+	adminPIN := os.Getenv("ADMIN_PIN")
+
 	maxUploadSize := int64(10485760)
 	if v := os.Getenv("MAX_UPLOAD_SIZE"); v != "" {
 		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
@@ -76,6 +78,7 @@ func main() {
 	mux.HandleFunc("/analise", handler.PageHandler("analise.html"))
 	mux.HandleFunc("/visualizar-relacoes", handler.PageHandler("visualizar-relacoes.html"))
 	mux.HandleFunc("/chatlattes", handler.PageHandler("chatlattes.html"))
+	mux.HandleFunc("/admin", handler.PageHandler("admin.html"))
 	mux.Handle("/static/", http.StripPrefix("/static/", handler.StaticHandler()))
 
 	mux.Handle("/api/config", &handler.ConfigHandler{ShareBaseURL: urlBase})
@@ -108,6 +111,8 @@ func main() {
 	mux.Handle("/api/analysis/download/", &handler.AnalysisDownloadHandler{Store: db})
 	mux.Handle("/api/summary/view/", &handler.SummaryViewHandler{Store: db})
 	mux.Handle("/api/analysis/view/", &handler.AnalysisViewHandler{Store: db})
+
+	mux.Handle("/api/admin/researchers", &handler.AdminResearchersHandler{Store: db, AdminPIN: adminPIN})
 
 	mux.Handle("/api/chat", &handler.ChatHandler{
 		Store:  db,

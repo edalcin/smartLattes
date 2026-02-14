@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 	"unicode"
 
@@ -299,6 +301,100 @@ func (m *MongoDB) GetAllCVsForChat(ctx context.Context) ([]map[string]interface{
 	if err := cursor.Err(); err != nil {
 		return nil, err
 	}
+
+	return results, nil
+}
+
+type AdminResearcher struct {
+	LattesID   string `json:"lattesId"`
+	Name       string `json:"name"`
+	HasResumo  bool   `json:"hasResumo"`
+	HasAnalise bool   `json:"hasAnalise"`
+}
+
+func (m *MongoDB) GetAllResearchersAdmin(ctx context.Context) ([]AdminResearcher, error) {
+	// Get all CVs with name
+	cvColl := m.database.Collection("curriculos")
+	projection := bson.M{
+		"_id": 1,
+		"curriculo-vitae.dados-gerais.nome-completo": 1,
+	}
+	cursor, err := cvColl.Find(ctx, bson.M{}, options.Find().SetProjection(projection))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	type cvDoc struct {
+		ID string `bson:"_id"`
+		CV struct {
+			DadosGerais struct {
+				NomeCompleto string `bson:"nome-completo"`
+			} `bson:"dados-gerais"`
+		} `bson:"curriculo-vitae"`
+	}
+
+	var cvs []cvDoc
+	for cursor.Next(ctx) {
+		var doc cvDoc
+		if err := cursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		cvs = append(cvs, doc)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	// Get IDs that have resumos
+	resumoSet := make(map[string]bool)
+	resumoCursor, err := m.database.Collection("resumos").Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"_id": 1}))
+	if err != nil {
+		return nil, err
+	}
+	defer resumoCursor.Close(ctx)
+	for resumoCursor.Next(ctx) {
+		var doc struct {
+			ID string `bson:"_id"`
+		}
+		if err := resumoCursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		resumoSet[doc.ID] = true
+	}
+
+	// Get IDs that have análises
+	analiseSet := make(map[string]bool)
+	analiseCursor, err := m.database.Collection("relacoes").Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"_id": 1}))
+	if err != nil {
+		return nil, err
+	}
+	defer analiseCursor.Close(ctx)
+	for analiseCursor.Next(ctx) {
+		var doc struct {
+			ID string `bson:"_id"`
+		}
+		if err := analiseCursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		analiseSet[doc.ID] = true
+	}
+
+	// Build result
+	results := make([]AdminResearcher, 0, len(cvs))
+	for _, cv := range cvs {
+		results = append(results, AdminResearcher{
+			LattesID:   cv.ID,
+			Name:       cv.CV.DadosGerais.NomeCompleto,
+			HasResumo:  resumoSet[cv.ID],
+			HasAnalise: analiseSet[cv.ID],
+		})
+	}
+
+	// Sort alphabetically by name (case-insensitive)
+	sort.Slice(results, func(i, j int) bool {
+		return strings.ToLower(results[i].Name) < strings.ToLower(results[j].Name)
+	})
 
 	return results, nil
 }

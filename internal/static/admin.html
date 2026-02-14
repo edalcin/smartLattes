@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - smartLattes</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<!-- Matomo -->
+<script>
+  var _paq = window._paq = window._paq || [];
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//matomo.dalc.in/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '9']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<!-- End Matomo Code -->
+<style>
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    .admin-table th,
+    .admin-table td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .admin-table th {
+        background-color: var(--color-bg);
+        font-weight: 600;
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .admin-table tr:hover {
+        background-color: var(--color-primary-light);
+    }
+    .admin-table a {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+    .admin-table a:hover {
+        text-decoration: underline;
+    }
+    .total-count {
+        color: var(--color-text-muted);
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+</style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">smart<span>Lattes</span></a>
+        <ul class="navbar-nav">
+            <li><a href="/upload">Enviar CV</a></li>
+            <li><a href="/resumo">Gerar Resumo</a></li>
+            <li><a href="/visualizar-resumo">Visualizar Resumo</a></li>
+            <li><a href="/analise">Analisar Rela&ccedil;&otilde;es</a></li>
+            <li><a href="/visualizar-relacoes">Visualizar Rela&ccedil;&otilde;es</a></li>
+            <li><a href="/chatlattes">chatLattes</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="card">
+            <h2>Painel Administrativo</h2>
+
+            <!-- PIN Form -->
+            <div id="pin-section">
+                <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
+                    Digite o PIN de administrador para acessar o painel.
+                </p>
+                <div class="form-group">
+                    <label for="pin-input">PIN</label>
+                    <input type="password" id="pin-input" class="form-input" placeholder="Digite o PIN...">
+                </div>
+                <button type="button" id="pin-btn" class="btn btn-primary">Entrar</button>
+            </div>
+
+            <!-- Error -->
+            <div id="error-message" class="message message-error"></div>
+
+            <!-- Loading -->
+            <div class="spinner" id="spinner"></div>
+
+            <!-- Data Table -->
+            <div id="data-section" style="display:none;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Pesquisador</th>
+                            <th>Resumo</th>
+                            <th>An&aacute;lise</th>
+                        </tr>
+                    </thead>
+                    <tbody id="researchers-body"></tbody>
+                </table>
+                <p class="total-count" id="total-count"></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/admin-painel.js"></script>
+</body>
+</html>
