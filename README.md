@@ -6,6 +6,20 @@
 
 <p align="left"><strong>Criação de resumos, análises de colaboração, redes de pesquisa e conversação inteligente com dados acadêmicos, com auxílio da Inteligência Artificial. Converse com a base de dados usando o "chatLattes" - um "ChatGPT" dedicado à base de pesquisadores.</strong></p>
 
+---
+
+### chatLattes — Converse com a base de pesquisadores
+
+O **chatLattes** transforma a base de currículos em um assistente inteligente: basta digitar perguntas em linguagem natural para explorar perfis, publicações, áreas de atuação e conexões entre pesquisadores. É como ter um "ChatGPT" exclusivo para os dados acadêmicos da sua instituição.
+
+<p align="center">
+  <img src="docs/chat.png" alt="Interface do chatLattes" width="720">
+</p>
+
+> **Exemplos de perguntas:**  *"Quais pesquisadores trabalham com etnobotânica?"* · *"Quem publicou mais artigos sobre plantas medicinais?"* · *"Faça um comparativo entre as produções de [pesquisador A] e [pesquisador B]"*
+
+---
+
 ## Motivação
 
 A [Plataforma Lattes](https://lattes.cnpq.br/) do CNPq constitui a principal base de dados de currículos acadêmicos do Brasil, reunindo informações detalhadas sobre a trajetória profissional, produção científica, formação acadêmica e áreas de atuação de pesquisadores de todo o país. Embora esses dados estejam publicamente disponíveis na plataforma, seu formato de apresentação — voltado à consulta individual — limita a capacidade de análise transversal e a identificação de padrões que emergem apenas quando múltiplos perfis são analisados em conjunto.
@@ -177,6 +191,7 @@ A aplicação possui seis páginas acessíveis pelo menu principal, além de uma
 | **Visualizar Relações** | `/visualizar-relacoes` | Consulta de análises já geradas |
 | **chatLattes** | `/chatlattes` | Chat inteligente com a base de currículos |
 | **Compartilhar** | `/?resumo=ID` ou `/?analise=ID` | Visualização somente-leitura de resumo ou análise compartilhado |
+| **Admin** | `/admin` | Painel administrativo protegido por PIN (acesso direto pela URL) |
 
 ## Variáveis de Ambiente
 
@@ -187,6 +202,7 @@ A aplicação possui seis páginas acessíveis pelo menu principal, além de uma
 | `PORT` | Não | `8080` | Porta do servidor HTTP |
 | `MAX_UPLOAD_SIZE` | Não | `10485760` | Tamanho máximo de upload em bytes (10 MB) |
 | `BASE_URL` | Não | `http://localhost:8080` | URL base para links de compartilhamento |
+| `ADMIN_PIN` | Não | — | PIN de acesso ao painel administrativo (`/admin`). Se vazio, o painel fica desabilitado. |
 
 ## Deploy
 
